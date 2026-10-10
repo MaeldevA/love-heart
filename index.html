@@ -16,13 +16,28 @@
     >
 
     <meta
+        name="apple-mobile-web-app-capable"
+        content="yes"
+    >
+
+    <meta
+        name="apple-mobile-web-app-status-bar-style"
+        content="black-translucent"
+    >
+
+    <meta
         name="description"
-        content="Um coração formado por eu te amo em vários idiomas."
+        content="Um coração formado por frases de amor em vários idiomas."
     >
 
     <title>Love Heart ❤️</title>
 
-    <link rel="stylesheet" href="style.css">
+    <!-- Estilo do site -->
+    <link
+        rel="stylesheet"
+        href="style.css?v=4"
+    >
+
 </head>
 
 <body>
@@ -32,20 +47,26 @@
         <div
             class="heart-container"
             id="heart-container"
-            aria-label="Coração formado por frases de amor em vários idiomas"
+            role="img"
+            aria-label="Coração animado formado por frases de amor em vários idiomas"
         >
 
             <canvas
                 id="heart-canvas"
                 width="800"
                 height="800"
-            ></canvas>
+            >
+                Seu navegador não suporta
+                a animação do coração.
+            </canvas>
 
         </div>
 
     </main>
 
-    <script src="script.js"></script>
+    <!-- Animação do coração -->
+    <script src="script.js?v=4"></script>
 
 </body>
+
 </html>
