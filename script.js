@@ -1,13 +1,10 @@
-
 "use strict";
 
 // ==========================================
-// LOVE HEART — VERSÃO ORIGINAL APROVADA
-// ÚNICA CORREÇÃO: LIMITAR AS PALAVRAS
-// AO FORMATO DO CORAÇÃO
+// LOVE HEART — VERSÃO APROVADA
+// AJUSTE ÚNICO: PREENCHER MELHOR OS ESPAÇOS
+// SEM DEIXAR PALAVRAS FORA DO CORAÇÃO
 // ==========================================
-
-// CONFIGURAÇÕES ORIGINAIS
 
 const SC = 21;
 const OY = 20;
@@ -16,8 +13,11 @@ const DURATION = 10;
 const TICK = 16;
 const ANIM = 42;
 const LIFT = 34;
-const GAP = 7;
 
+// só um pouco menor para preencher melhor
+const GAP = 5;
+
+// mantidos os tamanhos que ficaram bonitos
 const SIZES = [10, 11, 12, 13];
 
 const FONT = "Arial";
@@ -32,22 +32,18 @@ const INTENSIDADE_BRILHO = 0.38;
 // CANVAS
 // ==========================================
 
-const canvas = document.getElementById(
-    "heart-canvas"
-);
-
+const canvas = document.getElementById("heart-canvas");
 const ctx = canvas.getContext("2d");
 
 const W = 800;
 const H = 800;
 
-const DPR = Math.min(
-    window.devicePixelRatio || 1,
-    3
-);
+const DPR = Math.min(window.devicePixelRatio || 1, 3);
 
 canvas.width = W * DPR;
 canvas.height = H * DPR;
+canvas.style.width = "100%";
+canvas.style.height = "100%";
 
 ctx.setTransform(
     DPR, 0, 0, DPR,
@@ -59,7 +55,7 @@ ctx.textAlign = "center";
 ctx.textBaseline = "middle";
 
 // ==========================================
-// FRASES ORIGINAIS
+// FRASES PRINCIPAIS
 // ==========================================
 
 const PHRASES = [
@@ -85,16 +81,43 @@ const PHRASES = [
     "Я тебе кохаю"
 ];
 
+// frases curtas para caber nos espaços vazios
+const FILLER_PHRASES = [
+    "Te amo",
+    "Eu te amo",
+    "Ti amo",
+    "Je t'aime",
+    "Love you",
+    "Amo você",
+    "Te quiero",
+    "Ich liebe dich",
+    "Ti voglio bene",
+    "Mi amor",
+    "Mon amour",
+    "Amor meu",
+    "S2",
+    "Amor",
+    "Eu amo você",
+    "I adore you",
+    "Miluji tě",
+    "Volim te",
+    "Te iubesc",
+    "Mahal kita",
+    "Aishiteru",
+    "사랑해",
+    "愛してる",
+    "我爱你"
+];
+
 // ==========================================
-// ALEATORIEDADE ORIGINAL
+// ALEATORIEDADE
 // ==========================================
 
 let seed = 11;
 
 function random() {
     seed = (
-        Math.imul(1664525, seed)
-        + 1013904223
+        Math.imul(1664525, seed) + 1013904223
     ) >>> 0;
 
     return seed / 4294967296;
@@ -115,18 +138,14 @@ function shuffle(array) {
 
     for (let i = result.length - 1; i > 0; i--) {
         const j = Math.floor(random() * (i + 1));
-
-        [result[i], result[j]] = [
-            result[j],
-            result[i]
-        ];
+        [result[i], result[j]] = [result[j], result[i]];
     }
 
     return result;
 }
 
 // ==========================================
-// CORES ORIGINAIS
+// CORES
 // ==========================================
 
 function clamp(v) {
@@ -134,9 +153,7 @@ function clamp(v) {
 }
 
 function mix(a, b, k) {
-    return a.map(
-        (v, i) => v + (b[i] - v) * k
-    );
+    return a.map((v, i) => v + (b[i] - v) * k);
 }
 
 function dim(c, k) {
@@ -144,27 +161,21 @@ function dim(c, k) {
 }
 
 function rgb(c) {
-    const values = c.map(
-        v => Math.round(clamp(v) * 255)
-    );
-
+    const values = c.map(v => Math.round(clamp(v) * 255));
     return `rgb(${values.join(",")})`;
 }
 
 function hexToRGB(hex) {
     return [1, 3, 5].map(
-        i => parseInt(
-            hex.slice(i, i + 2), 16
-        ) / 255
+        i => parseInt(hex.slice(i, i + 2), 16) / 255
     );
 }
 
 const BGC = hexToRGB(BG);
-
 const FLASH = [1, 0.78, 0.78];
 
 // ==========================================
-// FORMATO MATEMÁTICO ORIGINAL
+// FORMATO MATEMÁTICO DO CORAÇÃO
 // ==========================================
 
 function heart(a) {
@@ -185,38 +196,21 @@ function heart(a) {
 const POLY = [];
 
 for (let i = 0; i < 720; i++) {
-    POLY.push(
-        heart(2 * Math.PI * i / 720)
-    );
+    POLY.push(heart(2 * Math.PI * i / 720));
 }
 
-const EDGES = POLY.map(
-    (p, i) => [
-        p,
-        POLY[(i + 1) % POLY.length]
-    ]
-);
+const EDGES = POLY.map((p, i) => [
+    p,
+    POLY[(i + 1) % POLY.length]
+]);
 
-const YMAX = Math.max(
-    ...POLY.map(p => p[1])
-);
-
-const YMIN = Math.min(
-    ...POLY.map(p => p[1])
-);
-
+const YMAX = Math.max(...POLY.map(p => p[1]));
+const YMIN = Math.min(...POLY.map(p => p[1]));
 const CY = (YMAX + YMIN) / 2;
 
 // ==========================================
-// NOVO: MÁSCARA DO CORAÇÃO
+// MÁSCARA DO CORAÇÃO
 // ==========================================
-
-// Usa exatamente o mesmo contorno
-// matemático da versão original.
-//
-// As letras continuam nos mesmos lugares.
-// Somente as partes que ultrapassarem
-// o desenho serão escondidas.
 
 const HEART_MASK = new Path2D();
 
@@ -234,7 +228,7 @@ POLY.forEach((p, i) => {
 HEART_MASK.closePath();
 
 // ==========================================
-// INTERSEÇÕES ORIGINAIS
+// INTERSEÇÕES
 // ==========================================
 
 function spans(y) {
@@ -242,12 +236,11 @@ function spans(y) {
 
     for (const [[x1, y1], [x2, y2]] of EDGES) {
         if (
-            (y1 <= y && y < y2)
-            || (y2 <= y && y < y1)
+            (y1 <= y && y < y2) ||
+            (y2 <= y && y < y1)
         ) {
             xs.push(
-                x1 + (y - y1)
-                * (x2 - x1) / (y2 - y1)
+                x1 + (y - y1) * (x2 - x1) / (y2 - y1)
             );
         }
     }
@@ -257,10 +250,7 @@ function spans(y) {
     const result = [];
 
     for (let i = 0; i + 1 < xs.length; i += 2) {
-        result.push([
-            xs[i],
-            xs[i + 1]
-        ]);
+        result.push([xs[i], xs[i + 1]]);
     }
 
     return result;
@@ -284,7 +274,7 @@ function intersect(A, B) {
 }
 
 // ==========================================
-// FONTES ORIGINAIS
+// FONTES
 // ==========================================
 
 function setFont(size) {
@@ -296,11 +286,12 @@ function measureText(text, size) {
     return ctx.measureText(text).width;
 }
 
-const ROW_H = 23;
+// diminuído só um pouco para preencher mais
+const ROW_H = 21;
 const HALF = ROW_H / 2;
 
 // ==========================================
-// DISTÂNCIA ORIGINAL
+// DISTÂNCIA AO CENTRO
 // ==========================================
 
 function mathDist(x, y) {
@@ -311,7 +302,7 @@ function mathDist(x, y) {
 }
 
 // ==========================================
-// CONSTRUÇÃO ORIGINAL DO CORAÇÃO
+// CONSTRUÇÃO DO CORAÇÃO
 // ==========================================
 
 function build() {
@@ -347,16 +338,33 @@ function build() {
             while (true) {
                 let fit = null;
 
+                // primeiro tenta as frases normais
                 for (let k = 0; k < 10; k++) {
                     const text = nextPhrase();
                     const size = choice(SIZES);
-                    const w = measureText(
-                        text, size
-                    );
+                    const w = measureText(text, size);
 
                     if (cur + w <= hi) {
                         fit = { text, size, w };
                         break;
+                    }
+                }
+
+                // se não couber, tenta preencher com frases curtas
+                if (!fit) {
+                    const fillers = shuffle(FILLER_PHRASES);
+
+                    for (const text of fillers) {
+                        for (const size of [10, 11, 9]) {
+                            const w = measureText(text, size);
+
+                            if (cur + w <= hi) {
+                                fit = { text, size, w };
+                                break;
+                            }
+                        }
+
+                        if (fit) break;
                     }
                 }
 
@@ -380,6 +388,7 @@ function build() {
                 continue;
             }
 
+            // distribuição da linha
             if (line.length > 1) {
                 const last = line[line.length - 1];
 
@@ -389,12 +398,39 @@ function build() {
 
                 line.forEach((item, i) => {
                     item.x += (
-                        left * i
-                        / (line.length - 1)
+                        left * i / (line.length - 1)
                     );
                 });
             } else {
                 line[0].x = (lo + hi) / 2;
+            }
+
+            // tentativa final de preencher o restinho do fim da linha
+            if (line.length > 0) {
+                const last = line[line.length - 1];
+                let endCursor = last.x + last.w / 2 + GAP;
+
+                if (hi - endCursor > 38) {
+                    const fillers = shuffle(FILLER_PHRASES);
+
+                    for (const text of fillers) {
+                        for (const size of [10, 9]) {
+                            const w = measureText(text, size);
+
+                            if (endCursor + w <= hi) {
+                                line.push({
+                                    x: endCursor + w / 2,
+                                    text,
+                                    size,
+                                    w
+                                });
+
+                                endCursor += w + GAP;
+                                break;
+                            }
+                        }
+                    }
+                }
             }
 
             line.forEach((item, i) => {
@@ -404,8 +440,8 @@ function build() {
                     text: item.text,
                     size: item.size,
                     edge: (
-                        i === 0
-                        || i === line.length - 1
+                        i === 0 ||
+                        i === line.length - 1
                     )
                 });
             });
@@ -413,8 +449,6 @@ function build() {
 
         y -= ROW_H;
     }
-
-    // Tons da versão aprovada
 
     const wine = [0.76, 0.055, 0.14];
     const crimson = [1.0, 0.14, 0.23];
@@ -435,92 +469,61 @@ function build() {
         base = mix(
             base,
             blood,
-            uniform(0, 0.22)
-            + (p.edge ? 0.22 : 0)
+            uniform(0, 0.22) + (p.edge ? 0.22 : 0)
         );
 
         p.color = base.map(clamp);
         p.rad = rad;
     }
 
-    // Contorno primeiro
-
-    const edges = placed.filter(
-        p => p.edge
-    );
-
-    // Interior depois
-
-    const inner = placed.filter(
-        p => !p.edge
-    );
+    const edges = placed.filter(p => p.edge);
+    const inner = placed.filter(p => !p.edge);
 
     edges.sort((a, b) => {
         const angleA = (
-            Math.atan2(a.x, a.y - CY)
-            + 2 * Math.PI
+            Math.atan2(a.x, a.y - CY) + 2 * Math.PI
         ) % (2 * Math.PI);
 
         const angleB = (
-            Math.atan2(b.x, b.y - CY)
-            + 2 * Math.PI
+            Math.atan2(b.x, b.y - CY) + 2 * Math.PI
         ) % (2 * Math.PI);
 
         return angleA - angleB;
     });
 
-    for (const p of inner) {
-        p.sortValue = (
-            -p.rad + uniform(0, 0.08)
-        );
-    }
+    inner.forEach(p => {
+        p.sortValue = -p.rad + uniform(0, 0.08);
+    });
 
-    inner.sort(
-        (a, b) => a.sortValue - b.sortValue
-    );
+    inner.sort((a, b) => a.sortValue - b.sortValue);
 
     return [...edges, ...inner];
 }
 
 // ==========================================
-// TEMPOS ORIGINAIS
+// TEMPOS
 // ==========================================
 
 const ORDER = build();
 
 const FORMATION_MS = DURATION * 1000;
 const FINISH_MS = ANIM * TICK;
-
-const CYCLE_MS = (
-    FORMATION_MS
-    + FINISH_MS
-    + TEMPO_PARADO
-);
+const CYCLE_MS = FORMATION_MS + FINISH_MS + TEMPO_PARADO;
 
 for (const p of ORDER) {
     p.dx = uniform(-10, 10);
 }
 
 // ==========================================
-// DESENHO ORIGINAL DAS LETRAS
+// DESENHO
 // ==========================================
 
-function drawText(
-    text,
-    size,
-    x,
-    y,
-    color,
-    glow = true
-) {
+function drawText(text, size, x, y, color, glow = true) {
     setFont(size);
-
     ctx.fillStyle = rgb(color);
 
     if (glow) {
-        ctx.shadowColor =
-            "rgba(255, 35, 65, 0.75)";
-
+        ctx.shadowColor = "rgba(255, 35, 65, 0.75)";
         ctx.shadowBlur = BRILHO;
     } else {
         ctx.shadowBlur = 0;
@@ -532,55 +535,31 @@ function drawText(
     ctx.shadowColor = "transparent";
 }
 
-// ==========================================
-// FRASE SURGINDO
-// ==========================================
-
 function drawPhrase(p, elapsed) {
-    const u = clamp(
-        elapsed / FINISH_MS
-    );
-
+    const u = clamp(elapsed / FINISH_MS);
     const e = 1 - Math.pow(1 - u, 3);
 
     const x = p.x + p.dx * (1 - e);
     const y = -p.y - (1 - e) * LIFT;
 
-    const flash = (
-        0.75
-        * Math.sin(
-            Math.PI * clamp(
-                (u - 0.55) / 0.45
-            )
-        )
+    const flash = 0.75 * Math.sin(
+        Math.PI * clamp((u - 0.55) / 0.45)
     );
 
     const col = mix(
-        mix(
-            BGC,
-            p.color,
-            e ** 1.5
-        ),
+        mix(BGC, p.color, e ** 1.5),
         FLASH,
         flash
     );
-
-    // Halo original
 
     drawText(
         p.text,
         p.size + 1,
         x,
         y,
-        mix(
-            BGC,
-            dim(p.color, 0.40),
-            e * e
-        ),
+        mix(BGC, dim(p.color, 0.40), e * e),
         false
     );
-
-    // Texto principal
 
     drawText(
         p.text,
@@ -592,37 +571,21 @@ function drawPhrase(p, elapsed) {
     );
 }
 
-// ==========================================
-// FRASE COMPLETA
-// ==========================================
-
-function drawFinished(
-    p,
-    color = p.color
-) {
+function drawFinished(p, color = p.color) {
     ctx.save();
 
-    ctx.shadowColor =
-        "rgba(255, 35, 65, 0.6)";
-
-    ctx.shadowBlur =
-        BRILHO * INTENSIDADE_BRILHO;
+    ctx.shadowColor = "rgba(255, 35, 65, 0.6)";
+    ctx.shadowBlur = BRILHO * INTENSIDADE_BRILHO;
 
     setFont(p.size);
-
     ctx.fillStyle = rgb(color);
-
-    ctx.fillText(
-        p.text,
-        p.x,
-        -p.y
-    );
+    ctx.fillText(p.text, p.x, -p.y);
 
     ctx.restore();
 }
 
 // ==========================================
-// ANIMAÇÃO INFINITA ORIGINAL
+// ANIMAÇÃO
 // ==========================================
 
 let cycleStart = null;
@@ -639,46 +602,21 @@ function frame(now) {
         elapsed = 0;
     }
 
-    // Limpa a tela normalmente
-
     ctx.fillStyle = BG;
-
-    ctx.fillRect(
-        -W / 2,
-        -H / 2,
-        W,
-        H
-    );
-
-    // ======================================
-    // ÚNICA ALTERAÇÃO DA VERSÃO ORIGINAL
-    // ======================================
-
-    // Protege o contorno matemático.
-    // Nenhuma letra poderá ser desenhada
-    // visualmente fora deste formato.
+    ctx.fillRect(-W / 2, -H / 2, W, H);
 
     ctx.save();
     ctx.clip(HEART_MASK);
 
-    // ======================================
-    // RESTANTE DA ANIMAÇÃO ORIGINAL
-    // ======================================
-
-    const progress = clamp(
-        elapsed / FORMATION_MS
-    );
+    const progress = clamp(elapsed / FORMATION_MS);
 
     const count = Math.min(
         ORDER.length,
-        Math.floor(
-            progress * ORDER.length
-        )
+        Math.floor(progress * ORDER.length)
     );
 
     const complete = (
-        elapsed >=
-        FORMATION_MS + FINISH_MS
+        elapsed >= FORMATION_MS + FINISH_MS
     );
 
     const shimmerIndex = Math.floor(
@@ -690,32 +628,16 @@ function frame(now) {
     for (let i = 0; i < count; i++) {
         const p = ORDER[i];
 
-        const born = (
-            i * FORMATION_MS
-            / ORDER.length
-        );
-
+        const born = i * FORMATION_MS / ORDER.length;
         const age = elapsed - born;
 
         if (age >= FINISH_MS) {
-            if (
-                complete
-                && i === shimmerIndex
-            ) {
-                const brightness = (
-                    0.6
-                    * Math.sin(
-                        Math.PI * phase
-                    )
-                );
+            if (complete && i === shimmerIndex) {
+                const brightness = 0.6 * Math.sin(Math.PI * phase);
 
                 drawFinished(
                     p,
-                    mix(
-                        p.color,
-                        FLASH,
-                        brightness
-                    )
+                    mix(p.color, FLASH, brightness)
                 );
             } else {
                 drawFinished(p);
@@ -725,16 +647,9 @@ function frame(now) {
         }
     }
 
-    // Finaliza a máscara sem afetar
-    // os próximos quadros da animação.
-
     ctx.restore();
 
     requestAnimationFrame(frame);
 }
-
-// ==========================================
-// INICIAR
-// ==========================================
 
 requestAnimationFrame(frame);
