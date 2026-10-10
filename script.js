@@ -1,11 +1,7 @@
 
 "use strict";
 
-// ==========================================
-// LOVE HEART — PREENCHIMENTO ATUALIZADO
-// ==========================================
-
-// CONFIGURAÇÕES ORIGINAIS
+// LOVE HEART — PREENCHIMENTO CORRIGIDO
 
 const SC = 21;
 const OY = 20;
@@ -14,10 +10,7 @@ const DURATION = 10;
 const TICK = 16;
 const ANIM = 42;
 const LIFT = 34;
-
-const GAP = 5;
-const ROW_H = 21;
-const HALF = ROW_H / 2;
+const GAP = 7;
 
 const SIZES = [10, 11, 12, 13];
 
@@ -25,7 +18,6 @@ const FONT = "Arial";
 const BG = "#060208";
 
 const TEMPO_PARADO = 3500;
-
 const BRILHO = 5;
 const INTENSIDADE_BRILHO = 0.38;
 
@@ -33,19 +25,13 @@ const INTENSIDADE_BRILHO = 0.38;
 // CANVAS
 // ==========================================
 
-const canvas = document.getElementById(
-    "heart-canvas"
-);
-
+const canvas = document.getElementById("heart-canvas");
 const ctx = canvas.getContext("2d");
 
 const W = 800;
 const H = 800;
 
-const DPR = Math.min(
-    window.devicePixelRatio || 1,
-    3
-);
+const DPR = Math.min(window.devicePixelRatio || 1, 3);
 
 canvas.width = W * DPR;
 canvas.height = H * DPR;
@@ -55,15 +41,15 @@ canvas.style.height = "100%";
 
 ctx.setTransform(
     DPR, 0, 0, DPR,
-    (W / 2) * DPR,
-    (H / 2) * DPR
+    W * DPR / 2,
+    H * DPR / 2
 );
 
 ctx.textAlign = "center";
 ctx.textBaseline = "middle";
 
 // ==========================================
-// FRASES ORIGINAIS
+// FRASES
 // ==========================================
 
 const PHRASES = [
@@ -89,11 +75,7 @@ const PHRASES = [
     "Я тебе кохаю"
 ];
 
-// ==========================================
-// MAIS IDIOMAS PARA DIVERSIFICAR
-// ==========================================
-
-const EXTRAS = [
+const EXTRA_PHRASES = [
     "Te quiero",
     "Te iubesc",
     "Volim te",
@@ -104,34 +86,31 @@ const EXTRAS = [
     "Nakupenda",
     "T'estimo",
     "Jeg elsker deg",
-    "Minä rakastan sinua",
     "Te sakam",
-    "Ma armastan sind",
-    "Ég elska þig",
     "Amo-te",
-    "Eu te amo",
-    "I love you",
-    "Ti amo",
-    "Je t'aime",
     "사랑해",
     "愛してる",
-    "我爱你"
+    "我爱你",
+    "Eu te amo",
+    "Ti amo",
+    "I love you",
+    "Je t'aime",
+    "Te amo"
 ];
 
-const ALL_PHRASES = [
-    ...new Set([...PHRASES, ...EXTRAS])
+const VARIANTS = [
+    ...new Set([...PHRASES, ...EXTRA_PHRASES])
 ];
 
 // ==========================================
-// ALEATORIEDADE FIXA
+// ALEATORIEDADE
 // ==========================================
 
 let seed = 11;
 
 function random() {
     seed = (
-        Math.imul(1664525, seed)
-        + 1013904223
+        Math.imul(1664525, seed) + 1013904223
     ) >>> 0;
 
     return seed / 4294967296;
@@ -142,122 +121,87 @@ function uniform(a, b) {
 }
 
 function choice(array) {
-    return array[
-        Math.floor(random() * array.length)
-    ];
+    return array[Math.floor(random() * array.length)];
 }
 
 function shuffle(array) {
-    const result = [...array];
+    const copy = [...array];
 
-    for (let i = result.length - 1; i > 0; i--) {
+    for (let i = copy.length - 1; i > 0; i--) {
         const j = Math.floor(random() * (i + 1));
 
-        [result[i], result[j]] = [
-            result[j],
-            result[i]
-        ];
+        [copy[i], copy[j]] = [copy[j], copy[i]];
     }
 
-    return result;
+    return copy;
 }
 
 // ==========================================
-// CORES ORIGINAIS
+// CORES
 // ==========================================
 
-function clamp(v) {
-    return Math.max(0, Math.min(1, v));
-}
+const clamp = v => Math.max(0, Math.min(1, v));
 
-function mix(a, b, k) {
-    return a.map(
-        (v, i) => v + (b[i] - v) * k
-    );
-}
+const mix = (a, b, k) =>
+    a.map((v, i) => v + (b[i] - v) * k);
 
-function dim(c, k) {
-    return c.map(v => v * k);
-}
+const dim = (c, k) =>
+    c.map(v => v * k);
 
-function rgb(c) {
-    const values = c.map(
+const rgb = c =>
+    `rgb(${c.map(
         v => Math.round(clamp(v) * 255)
-    );
+    ).join(",")})`;
 
-    return `rgb(${values.join(",")})`;
-}
-
-const BGC = [
-    6 / 255,
-    2 / 255,
-    8 / 255
-];
-
+const BGC = [6 / 255, 2 / 255, 8 / 255];
 const FLASH = [1, 0.78, 0.78];
 
 // ==========================================
-// FORMATO MATEMÁTICO DO CORAÇÃO
+// CORAÇÃO MATEMÁTICO
 // ==========================================
 
 function heart(a) {
-    const x = 16 * Math.sin(a) ** 3;
-
-    const y =
-        13 * Math.cos(a)
-        - 5 * Math.cos(2 * a)
-        - 2 * Math.cos(3 * a)
-        - Math.cos(4 * a);
-
     return [
-        x * SC,
-        y * SC + OY
+        16 * Math.sin(a) ** 3 * SC,
+
+        (
+            13 * Math.cos(a)
+            - 5 * Math.cos(2 * a)
+            - 2 * Math.cos(3 * a)
+            - Math.cos(4 * a)
+        ) * SC + OY
     ];
 }
 
 const POLY = Array.from(
     { length: 720 },
-    (_, i) => heart(i * Math.PI * 2 / 720)
+    (_, i) => heart(i * 2 * Math.PI / 720)
 );
 
 const EDGES = POLY.map(
-    (p, i) => [
-        p,
-        POLY[(i + 1) % POLY.length]
-    ]
+    (p, i) => [p, POLY[(i + 1) % POLY.length]]
 );
 
-const YMAX = Math.max(
-    ...POLY.map(p => p[1])
-);
-
-const YMIN = Math.min(
-    ...POLY.map(p => p[1])
-);
-
+const YMAX = Math.max(...POLY.map(p => p[1]));
+const YMIN = Math.min(...POLY.map(p => p[1]));
 const CY = (YMAX + YMIN) / 2;
 
-// ==========================================
-// MÁSCARA DE PROTEÇÃO
-// ==========================================
+// Máscara: nada ultrapassa o coração
 
 const HEART_MASK = new Path2D();
 
-POLY.forEach((p, i) => {
-    const x = p[0];
-    const y = -p[1];
-
+POLY.forEach(([x, y], i) => {
     if (i === 0) {
-        HEART_MASK.moveTo(x, y);
+        HEART_MASK.moveTo(x, -y);
     } else {
-        HEART_MASK.lineTo(x, y);
+        HEART_MASK.lineTo(x, -y);
     }
 });
 
 HEART_MASK.closePath();
 
 // ==========================================
-// INTERSEÇÕES DO CORAÇÃO
+// INTERSEÇÕES
 // ==========================================
 
 function spans(y) {
@@ -269,8 +213,8 @@ function spans(y) {
             (y2 <= y && y < y1)
         ) {
             xs.push(
-                x1 + (y - y1)
-                * (x2 - x1) / (y2 - y1)
+                x1 + (y - y1) *
+                (x2 - x1) / (y2 - y1)
             );
         }
     }
@@ -280,10 +224,7 @@ function spans(y) {
     const result = [];
 
     for (let i = 0; i + 1 < xs.length; i += 2) {
-        result.push([
-            xs[i],
-            xs[i + 1]
-        ]);
+        result.push([xs[i], xs[i + 1]]);
     }
 
     return result;
@@ -319,9 +260,8 @@ function measureText(text, size) {
     return ctx.measureText(text).width;
 }
 
-// ==========================================
-// DISTÂNCIA AO CENTRO
-// ==========================================
+const ROW_H = 23;
+const HALF = ROW_H / 2;
 
 function mathDist(x, y) {
     return Math.hypot(
@@ -331,32 +271,32 @@ function mathDist(x, y) {
 }
 
 // ==========================================
-// COR E MOVIMENTO
+// CORES DAS PALAVRAS
 // ==========================================
 
 function colorize(p, edge) {
     const wine = [0.76, 0.055, 0.14];
-    const crimson = [1.0, 0.14, 0.23];
-    const blood = [1.0, 0.24, 0.32];
+    const crimson = [1, 0.14, 0.23];
+    const blood = [1, 0.24, 0.32];
 
     const rad = Math.min(
         1,
         mathDist(p.x, p.y)
     );
 
-    let color = mix(
+    let c = mix(
         wine,
         crimson,
         0.25 + 0.75 * rad
     );
 
-    color = mix(
-        color,
+    c = mix(
+        c,
         blood,
         uniform(0, 0.22) + (edge ? 0.22 : 0)
     );
 
-    p.color = color.map(clamp);
+    p.color = c.map(clamp);
     p.rad = rad;
     p.edge = edge;
     p.dx = uniform(-10, 10);
@@ -365,7 +305,7 @@ function colorize(p, edge) {
 }
 
 // ==========================================
-// CONSTRUÇÃO ORIGINAL DO CORAÇÃO
+// FORMAÇÃO ORIGINAL
 // ==========================================
 
 function buildBase() {
@@ -414,9 +354,7 @@ function buildBase() {
                     }
                 }
 
-                if (!fit) {
-                    break;
-                }
+                if (!fit) break;
 
                 line.push({
                     x: cur + fit.w / 2,
@@ -427,21 +365,17 @@ function buildBase() {
                 cur += fit.w + GAP;
             }
 
-            if (!line.length) {
-                continue;
-            }
+            if (!line.length) continue;
 
             if (line.length > 1) {
                 const last = line[line.length - 1];
 
-                const free = hi - (
+                const slack = hi - (
                     last.x + last.w / 2
                 );
 
                 line.forEach((p, i) => {
-                    p.x += (
-                        free * i / (line.length - 1)
-                    );
+                    p.x += slack * i / (line.length - 1);
                 });
             } else {
                 line[0].x = (lo + hi) / 2;
@@ -451,8 +385,7 @@ function buildBase() {
                 placed.push(
                     colorize(
                         p,
-                        i === 0 ||
-                        i === line.length - 1
+                        i === 0 || i === line.length - 1
                     )
                 );
             });
@@ -463,19 +396,21 @@ function buildBase() {
 }
 
 // ==========================================
-// LIMITES DAS PALAVRAS
+// DETECÇÃO DE SOBREPOSIÇÃO
 // ==========================================
 
-function itemBounds(p, pad = 2) {
+function box(p, pad = 1.5) {
+    const h = p.size * 1.14;
+
     return {
         left: p.x - p.w / 2 - pad,
         right: p.x + p.w / 2 + pad,
-        bottom: p.y - p.size * 0.57 - pad,
-        top: p.y + p.size * 0.57 + pad
+        bottom: p.y - h / 2 - pad,
+        top: p.y + h / 2 + pad
     };
 }
 
-function boxesOverlap(a, b) {
+function overlaps(a, b) {
     return (
         a.left < b.right &&
         a.right > b.left &&
@@ -484,338 +419,165 @@ function boxesOverlap(a, b) {
     );
 }
 
-function fitsHeart(x, y, w, size) {
-    const samples = [
-        y - size * 0.48,
-        y,
-        y + size * 0.48
-    ];
+function canFit(p, existing) {
+    const b = box(p, 1.4);
 
-    for (const yy of samples) {
-        const fits = spans(yy).some(
-            ([a, b]) =>
-                x - w / 2 >= a + 1 &&
-                x + w / 2 <= b - 1
-        );
+    for (const q of existing) {
+        if (
+            Math.abs(q.y - p.y) > 20 ||
+            Math.abs(q.x - p.x) > 160
+        ) continue;
 
-        if (!fits) {
+        if (overlaps(b, box(q, 1.4))) {
             return false;
         }
     }
 
-    return true;
-}
+    const inset = 2;
 
-function canPlace(p, placed, pad = 2) {
-    if (!fitsHeart(p.x, p.y, p.w, p.size)) {
-        return false;
-    }
+    const ys = [
+        p.y - p.size * 0.48,
+        p.y,
+        p.y + p.size * 0.48
+    ];
 
-    const bounds = itemBounds(p, pad);
-
-    return !placed.some(
-        q => boxesOverlap(
-            bounds,
-            itemBounds(q, pad)
+    return ys.every(y =>
+        spans(y).some(([lo, hi]) =>
+            p.x - p.w / 2 >= lo + inset &&
+            p.x + p.w / 2 <= hi - inset
         )
     );
 }
 
 // ==========================================
-// AGRUPAMENTO DOS ESPAÇOS OCUPADOS
+// DISTRIBUIÇÃO DOS IDIOMAS
 // ==========================================
 
-function joinIntervals(intervals) {
-    intervals.sort((a, b) => a[0] - b[0]);
-
-    const out = [];
-
-    for (const [lo, hi] of intervals) {
-        if (
-            out.length &&
-            lo <= out[out.length - 1][1]
-        ) {
-            out[out.length - 1][1] = Math.max(
-                hi,
-                out[out.length - 1][1]
-            );
-        } else {
-            out.push([lo, hi]);
-        }
-    }
-
-    return out;
-}
-
-// ==========================================
-// FRASES CURTAS PARA OS ESPAÇOS
-// ==========================================
-
-const FILLER_PHRASES = [
-    "Te amo",
-    "Eu te amo",
-    "I love you",
-    "Love you",
-    "Ti amo",
-    "Je t'aime",
-    "Te quiero",
-    "Amo você",
-    "Ich liebe dich",
-    "Te iubesc",
-    "Volim te",
-    "Miluji tě",
-    "Mahal kita",
-    "Aishiteru",
-    "사랑해",
-    "愛してる",
-    "我爱你",
-    "Kocham cię",
-    "Ik hou van jou",
-    "Jag älskar dig"
-];
-
-// ==========================================
-// PREENCHIMENTO ORIGINAL
-// ==========================================
-
-function originalFillVoids(placed) {
-    let fillerOrder = shuffle(FILLER_PHRASES);
-    let fillerIndex = 0;
-
-    function nextPool() {
-        if (fillerIndex >= fillerOrder.length - 1) {
-            fillerOrder = shuffle(FILLER_PHRASES);
-            fillerIndex = 0;
-        }
-
-        const rotated = [
-            ...fillerOrder.slice(fillerIndex),
-            ...fillerOrder.slice(0, fillerIndex)
-        ];
-
-        fillerIndex++;
-
-        return rotated;
-    }
-
-    for (
-        let y = YMAX - HALF;
-        y > YMIN + HALF;
-        y -= ROW_H / 2
-    ) {
-        const segments = intersect(
-            spans(y + HALF * 0.9),
-            spans(y - HALF * 0.9)
-        );
-
-        for (const [segLo, segHi] of segments) {
-            const occupied = [];
-
-            for (const p of placed) {
-                const bounds = itemBounds(p);
-
-                if (
-                    bounds.top > y - HALF * 0.55 &&
-                    bounds.bottom < y + HALF * 0.55
-                ) {
-                    occupied.push([
-                        bounds.left,
-                        bounds.right
-                    ]);
-                }
-            }
-
-            const merged = joinIntervals(occupied);
-
-            let start = segLo + 2;
-            const gaps = [];
-
-            for (const [lo, hi] of merged) {
-                if (lo - start > 26) {
-                    gaps.push([start, lo]);
-                }
-
-                start = Math.max(start, hi);
-            }
-
-            if (segHi - start > 26) {
-                gaps.push([start, segHi - 2]);
-            }
-
-            for (const [gapLo, gapHi] of gaps) {
-                let cursor = gapLo + 1;
-                let guard = 0;
-
-                while (
-                    gapHi - cursor > 22 &&
-                    guard++ < 12
-                ) {
-                    let fit = null;
-
-                    for (const text of nextPool()) {
-                        for (const size of [11, 10, 9]) {
-                            const w = measureText(text, size);
-
-                            if (cursor + w > gapHi) {
-                                continue;
-                            }
-
-                            const p = {
-                                x: cursor + w / 2,
-                                y,
-                                text,
-                                size,
-                                w
-                            };
-
-                            if (canPlace(p, placed, 2)) {
-                                fit = p;
-                                break;
-                            }
-                        }
-
-                        if (fit) {
-                            break;
-                        }
-                    }
-
-                    if (!fit) {
-                        break;
-                    }
-
-                    colorize(fit, false);
-                    placed.push(fit);
-
-                    cursor += fit.w + 4;
-                }
-            }
-        }
-    }
-
-    return placed;
-}
-
-// ==========================================
-// DIVERSIFICAR IDIOMAS PRÓXIMOS
-// ==========================================
-
-function diversify(placed) {
-    const seen = [];
-    const usage = new Map();
-
-    const sorted = [...placed].sort(
+function diversify(base) {
+    const ordered = [...base].sort(
         (a, b) => b.y - a.y || a.x - b.x
     );
 
-    for (const p of sorted) {
-        const nearby = seen.filter(
-            q =>
-                Math.abs(p.x - q.x) < 83 &&
-                Math.abs(p.y - q.y) < 59
+    const done = [];
+
+    for (const p of ordered) {
+        const near = done.filter(q =>
+            Math.abs(q.x - p.x) < 88 &&
+            Math.abs(q.y - p.y) < 55
         );
 
-        const repeated = nearby.some(
-            q => q.text === p.text
-        );
-
-        if (repeated) {
-            const replacements = [];
-
-            for (const word of ALL_PHRASES) {
-                if (
-                    nearby.some(q => q.text === word)
-                ) {
-                    continue;
-                }
-
-                const width = measureText(
-                    word,
-                    p.size
-                );
-
-                if (
-                    width <= p.w &&
-                    width >= p.w * 0.72
-                ) {
-                    replacements.push({
-                        word,
-                        width,
-                        used: usage.get(word) || 0
-                    });
-                }
-            }
-
-            replacements.sort(
-                (a, b) =>
-                    a.used - b.used ||
-                    Math.abs(b.width - p.w) -
-                    Math.abs(a.width - p.w)
+        if (near.some(q => q.text === p.text)) {
+            const options = VARIANTS.map(text => ({
+                text,
+                w: measureText(text, p.size)
+            }))
+            .filter(q =>
+                !near.some(n => n.text === q.text) &&
+                Math.abs(q.w - p.w) < 4
+            )
+            .sort((a, b) =>
+                Math.abs(a.w - p.w) -
+                Math.abs(b.w - p.w)
             );
 
-            if (replacements.length) {
-                p.text = replacements[0].word;
-                p.w = replacements[0].width;
+            if (options.length) {
+                p.text = options[0].text;
+                p.w = options[0].w;
             }
         }
 
-        usage.set(
-            p.text,
-            (usage.get(p.text) || 0) + 1
-        );
-
-        seen.push(p);
+        done.push(p);
     }
 }
 
 // ==========================================
-// NOVO PREENCHIMENTO DOS VÃOS
+// PREENCHIMENTO DOS ESPAÇOS
 // ==========================================
 
-function fillGaps(placed) {
+function fillGaps(base) {
     const added = [];
-    const usage = new Map();
+    const all = [...base];
 
-    placed.forEach(p => {
-        usage.set(
+    const useCount = new Map();
+
+    for (const p of base) {
+        useCount.set(
             p.text,
-            (usage.get(p.text) || 0) + 1
+            (useCount.get(p.text) || 0) + 1
         );
-    });
+    }
+
+    // Primeiro percorre as linhas originais.
+    // Depois verifica espaços entre as linhas.
+
+    const rows = [];
 
     for (
         let y = YMAX - HALF;
         y > YMIN + HALF;
         y -= ROW_H
     ) {
+        rows.push(y);
+    }
+
+    for (
+        let y = YMAX - HALF - ROW_H / 2;
+        y > YMIN + HALF;
+        y -= ROW_H
+    ) {
+        rows.push(y);
+    }
+
+    for (const y of rows) {
         const safe = intersect(
-            spans(y + 8),
-            spans(y - 8)
+            spans(y + 6.5),
+            spans(y - 6.5)
         );
 
         for (let [lo, hi] of safe) {
             lo += 2;
             hi -= 2;
 
-            const occupied = [];
+            if (hi - lo < 18) continue;
 
-            for (const p of [...placed, ...added]) {
-                if (Math.abs(p.y - y) > 9) {
-                    continue;
-                }
+            const blocked = [];
 
-                occupied.push([
-                    p.x - p.w / 2 - 2,
-                    p.x + p.w / 2 + 2
-                ]);
+            for (const q of all) {
+                const b = box(q, 1.5);
+
+                if (
+                    b.top < y - 6.6 ||
+                    b.bottom > y + 6.6
+                ) continue;
+
+                blocked.push([b.left, b.right]);
             }
 
-            const blocked = joinIntervals(occupied);
+            blocked.sort((a, b) => a[0] - b[0]);
 
-            let cursor = lo;
+            const merged = [];
+
+            for (const interval of blocked) {
+                const last = merged[merged.length - 1];
+
+                if (
+                    last &&
+                    interval[0] <= last[1]
+                ) {
+                    last[1] = Math.max(
+                        last[1],
+                        interval[1]
+                    );
+                } else {
+                    merged.push([...interval]);
+                }
+            }
+
             const gaps = [];
+            let cursor = lo;
 
-            for (const [a, b] of blocked) {
-                if (a > cursor) {
+            for (const [a, b] of merged) {
+                if (a > cursor + 13) {
                     gaps.push([
                         cursor,
                         Math.min(a, hi)
@@ -824,146 +586,129 @@ function fillGaps(placed) {
 
                 cursor = Math.max(cursor, b);
 
-                if (cursor >= hi) {
-                    break;
-                }
+                if (cursor >= hi) break;
             }
 
-            if (cursor < hi) {
+            if (hi > cursor + 13) {
                 gaps.push([cursor, hi]);
             }
 
-            for (const [left, right] of gaps) {
-                const width = right - left;
+            // Preenche somente áreas livres
+            for (const [glo, ghi] of gaps) {
+                const gw = ghi - glo;
 
-                if (width < 17) {
-                    continue;
-                }
+                let selected = null;
 
-                const nearby = [
-                    ...placed,
-                    ...added
-                ].filter(
-                    p =>
-                        Math.abs(p.y - y) < 40 &&
-                        Math.abs(
-                            p.x - (left + right) / 2
-                        ) < 82
+                const nearby = all.filter(q =>
+                    Math.abs(q.y - y) < 48 &&
+                    Math.abs(
+                        q.x - (glo + ghi) / 2
+                    ) < 110
                 );
 
                 const candidates = [];
 
-                // Prioridade: frase inteira
-                for (const word of ALL_PHRASES) {
+                // Prioridade: frases completas
+                for (const text of VARIANTS) {
                     if (
                         nearby.some(
-                            p => p.text === word
+                            p => p.text === text
                         )
-                    ) {
-                        continue;
-                    }
+                    ) continue;
 
                     for (const size of [12, 11, 10, 9]) {
                         const w = measureText(
-                            word,
+                            text,
                             size
                         );
 
-                        if (w > width - 2) {
-                            continue;
-                        }
+                        if (w > gw - 3) continue;
 
-                        candidates.push({
-                            text: word,
+                        const p = {
+                            x: (glo + ghi) / 2,
+                            y,
+                            text,
                             size,
                             w
+                        };
+
+                        if (!canFit(p, all)) continue;
+
+                        const target = Math.min(gw - 3, 80);
+
+                        const score =
+                            Math.abs(target - w) * 0.28 +
+                            (12 - size) * 1.3 +
+                            (useCount.get(text) || 0) * 1.7;
+
+                        candidates.push({
+                            p,
+                            score
                         });
                     }
                 }
 
-                candidates.sort((a, b) => {
-                    const scoreA =
-                        (usage.get(a.text) || 0) * 5 +
-                        Math.abs(width - a.w) * 0.25 +
-                        (12 - a.size) * 1.8;
+                candidates.sort(
+                    (a, b) => a.score - b.score
+                );
 
-                    const scoreB =
-                        (usage.get(b.text) || 0) * 5 +
-                        Math.abs(width - b.w) * 0.25 +
-                        (12 - b.size) * 1.8;
+                if (candidates.length) {
+                    selected = candidates[0].p;
+                } else {
+                    // Nos menores espaços, utiliza
+                    // pequenos trechos de frases.
+                    const truncations = [
+                        "Eu te",
+                        "I love",
+                        "Te am",
+                        "Je t'",
+                        "Ti am",
+                        "사랑",
+                        "我爱",
+                        "愛して",
+                        "Te qu",
+                        "Volim",
+                        "Miluji"
+                    ];
 
-                    return scoreA - scoreB;
-                });
+                    for (const text of shuffle(truncations)) {
+                        for (const size of [11, 10, 9]) {
+                            const w = measureText(
+                                text,
+                                size
+                            );
 
-                let best = candidates[0];
-                let limited = false;
+                            if (w > gw - 3) continue;
 
-                // Se não couber inteira,
-                // permite recortar no espaço.
-                if (!best) {
-                    const possible = ALL_PHRASES.filter(
-                        word =>
-                            !nearby.some(
-                                p => p.text === word
-                            )
-                    );
+                            const p = {
+                                x: (glo + ghi) / 2,
+                                y,
+                                text,
+                                size,
+                                w
+                            };
 
-                    const words = (
-                        possible.length
-                            ? possible
-                            : ALL_PHRASES
-                    ).slice();
+                            if (canFit(p, all)) {
+                                selected = p;
+                                break;
+                            }
+                        }
 
-                    words.sort(
-                        (a, b) =>
-                            measureText(a, 10) -
-                            measureText(b, 10)
-                    );
-
-                    const word = words[0];
-
-                    best = {
-                        text: word,
-                        size: 10,
-                        w: measureText(word, 10)
-                    };
-
-                    limited = true;
+                        if (selected) break;
+                    }
                 }
 
-                const visible = Math.min(
-                    best.w,
-                    width - 2
-                );
+                if (selected) {
+                    colorize(selected, false);
 
-                const start = left + Math.max(
-                    0,
-                    (width - visible) / 2
-                );
+                    all.push(selected);
+                    added.push(selected);
 
-                const item = {
-                    x: start + best.w / 2,
-                    y,
-                    text: best.text,
-                    size: best.size,
-                    w: best.w,
-
-                    // Limites próprios do vão
-                    clipLeft: start,
-                    clipRight: start + visible,
-                    clipTop: y + 9,
-                    clipBottom: y - 9,
-
-                    partial: limited
-                };
-
-                colorize(item, false);
-                added.push(item);
-
-                usage.set(
-                    item.text,
-                    (usage.get(item.text) || 0) + 1
-                );
+                    useCount.set(
+                        selected.text,
+                        (useCount.get(selected.text) || 0) + 1
+                    );
+                }
             }
         }
     }
@@ -972,64 +717,51 @@ function fillGaps(placed) {
 }
 
 // ==========================================
-// ORGANIZAÇÃO FINAL
+// ORDEM DA ANIMAÇÃO
 // ==========================================
 
 function build() {
-    const base = originalFillVoids(
-        buildBase()
-    );
+    const base = buildBase();
 
-    // Distribui melhor os idiomas
     diversify(base);
 
-    // Acrescenta frases aos espaços livres
-    const fillers = fillGaps(base);
+    const fills = fillGaps(base);
 
-    const all = [
-        ...base,
-        ...fillers
-    ];
+    const full = [...base, ...fills];
 
-    const edges = base.filter(
-        p => p.edge
-    );
-
-    const inner = all.filter(
-        p => !p.edge
-    );
+    const edges = full.filter(p => p.edge);
+    const inner = full.filter(p => !p.edge);
 
     // Contorno primeiro
     edges.sort((a, b) => {
         const angleA = (
-            Math.atan2(a.x, a.y - CY)
-            + 2 * Math.PI
+            Math.atan2(a.x, a.y - CY) +
+            2 * Math.PI
         ) % (2 * Math.PI);
 
         const angleB = (
-            Math.atan2(b.x, b.y - CY)
-            + 2 * Math.PI
+            Math.atan2(b.x, b.y - CY) +
+            2 * Math.PI
         ) % (2 * Math.PI);
 
         return angleA - angleB;
     });
 
-    // Depois, preenchimento de fora
-    // para dentro do coração
-    inner.forEach(p => {
-        p.order =
-            -p.rad + uniform(0, 0.06);
-    });
+    // Interior depois
+    for (const p of inner) {
+        p.sortValue =
+            -p.rad + uniform(0, 0.08);
+    }
 
     inner.sort(
-        (a, b) => a.order - b.order
+        (a, b) => a.sortValue - b.sortValue
     );
 
     return [...edges, ...inner];
 }
 
 // ==========================================
-// TEMPOS DA ANIMAÇÃO
+// TEMPOS
 // ==========================================
 
 const ORDER = build();
@@ -1043,7 +775,7 @@ const CYCLE_MS =
     TEMPO_PARADO;
 
 // ==========================================
-// DESENHO DAS FRASES
+// TEXTO
 // ==========================================
 
 function drawText(
@@ -1058,14 +790,11 @@ function drawText(
 
     ctx.fillStyle = rgb(color);
 
-    if (glow) {
-        ctx.shadowColor =
-            "rgba(255, 35, 65, 0.75)";
+    ctx.shadowColor = glow
+        ? "rgba(255, 35, 65, 0.75)"
+        : "transparent";
 
-        ctx.shadowBlur = BRILHO;
-    } else {
-        ctx.shadowBlur = 0;
-    }
+    ctx.shadowBlur = glow ? BRILHO : 0;
 
     ctx.fillText(text, x, y);
 
@@ -1074,34 +803,22 @@ function drawText(
 }
 
 // ==========================================
-// MOVIMENTO DAS FRASES
+// FRASE SURGINDO
 // ==========================================
 
-function drawPhrase(p, elapsed) {
-    const u = clamp(
-        elapsed / FINISH_MS
-    );
-
+function drawPhrase(p, age) {
+    const u = clamp(age / FINISH_MS);
     const e = 1 - (1 - u) ** 3;
 
-    const x =
-        p.x + p.dx * (1 - e);
-
-    const y =
-        -p.y - (1 - e) * LIFT;
+    const x = p.x + p.dx * (1 - e);
+    const y = -p.y - (1 - e) * LIFT;
 
     const flash = 0.75 * Math.sin(
-        Math.PI * clamp(
-            (u - 0.55) / 0.45
-        )
+        Math.PI * clamp((u - 0.55) / 0.45)
     );
 
     const col = mix(
-        mix(
-            BGC,
-            p.color,
-            e ** 1.5
-        ),
+        mix(BGC, p.color, e ** 1.5),
         FLASH,
         flash
     );
@@ -1113,7 +830,7 @@ function drawPhrase(p, elapsed) {
         y,
         mix(
             BGC,
-            dim(p.color, 0.40),
+            dim(p.color, 0.4),
             e * e
         ),
         false
@@ -1130,17 +847,13 @@ function drawPhrase(p, elapsed) {
 }
 
 // ==========================================
-// FRASES COMPLETAS
+// FRASE COMPLETA
 // ==========================================
 
-function drawFinished(
-    p,
-    color = p.color
-) {
+function drawFinished(p, color = p.color) {
     ctx.save();
 
-    ctx.shadowColor =
-        "rgba(255, 35, 65, 0.6)";
+    ctx.shadowColor = "rgba(255, 35, 65, 0.6)";
 
     ctx.shadowBlur =
         BRILHO * INTENSIDADE_BRILHO;
@@ -1149,55 +862,13 @@ function drawFinished(
 
     ctx.fillStyle = rgb(color);
 
-    ctx.fillText(
-        p.text,
-        p.x,
-        -p.y
-    );
+    ctx.fillText(p.text, p.x, -p.y);
 
     ctx.restore();
 }
 
 // ==========================================
-// PROTEÇÃO INDIVIDUAL DOS VÃOS
-// ==========================================
-
-function drawItem(p, age, color) {
-    const hasClip = (
-        p.clipLeft !== undefined
-    );
-
-    if (hasClip) {
-        ctx.save();
-
-        ctx.beginPath();
-
-        ctx.rect(
-            p.clipLeft,
-            -p.clipTop,
-            p.clipRight - p.clipLeft,
-            p.clipTop - p.clipBottom
-        );
-
-        ctx.clip();
-    }
-
-    if (age >= FINISH_MS) {
-        drawFinished(
-            p,
-            color || p.color
-        );
-    } else if (age >= 0) {
-        drawPhrase(p, age);
-    }
-
-    if (hasClip) {
-        ctx.restore();
-    }
-}
-
-// ==========================================
-// ANIMAÇÃO INFINITA
+// LOOP INFINITO
 // ==========================================
 
 let cycleStart = null;
@@ -1207,9 +878,8 @@ function frame(now) {
         cycleStart = now;
     }
 
-    const elapsed = (
-        now - cycleStart
-    ) % CYCLE_MS;
+    const elapsed =
+        (now - cycleStart) % CYCLE_MS;
 
     ctx.fillStyle = BG;
 
@@ -1223,62 +893,56 @@ function frame(now) {
     ctx.save();
 
     // Nenhuma palavra ultrapassa
-    // o formato do coração
+    // o formato do coração.
     ctx.clip(HEART_MASK);
-
-    const progress = clamp(
-        elapsed / FORMATION_MS
-    );
 
     const count = Math.min(
         ORDER.length,
         Math.floor(
-            progress * ORDER.length
+            clamp(elapsed / FORMATION_MS) *
+            ORDER.length
         )
     );
 
-    const complete = (
-        elapsed >=
-        FORMATION_MS + FINISH_MS
-    );
+    const complete =
+        elapsed >= FORMATION_MS + FINISH_MS;
 
-    const shimmerIndex = Math.floor(
-        elapsed / 140
-    ) % Math.max(1, ORDER.length);
+    const shimmerIndex =
+        Math.floor(elapsed / 140) %
+        Math.max(1, ORDER.length);
 
-    const phase = (
-        elapsed % 140
-    ) / 140;
+    const phase =
+        (elapsed % 140) / 140;
 
     for (let i = 0; i < count; i++) {
         const p = ORDER[i];
 
         const born =
-            i * FORMATION_MS /
-            ORDER.length;
+            i * FORMATION_MS / ORDER.length;
 
         const age = elapsed - born;
 
-        if (
-            complete &&
-            i === shimmerIndex
-        ) {
-            const brightness =
-                0.6 * Math.sin(
-                    Math.PI * phase
-                );
+        if (age >= FINISH_MS) {
+            if (
+                complete &&
+                i === shimmerIndex
+            ) {
+                const brightness =
+                    0.6 * Math.sin(Math.PI * phase);
 
-            drawItem(
-                p,
-                age,
-                mix(
-                    p.color,
-                    FLASH,
-                    brightness
-                )
-            );
-        } else {
-            drawItem(p, age);
+                drawFinished(
+                    p,
+                    mix(
+                        p.color,
+                        FLASH,
+                        brightness
+                    )
+                );
+            } else {
+                drawFinished(p);
+            }
+        } else if (age >= 0) {
+            drawPhrase(p, age);
         }
     }
 
@@ -1286,9 +950,5 @@ function frame(now) {
 
     requestAnimationFrame(frame);
 }
-
-// ==========================================
-// INICIAR
-// ==========================================
 
 requestAnimationFrame(frame);
