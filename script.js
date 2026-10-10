@@ -1,32 +1,36 @@
 
 "use strict";
 
-// ========================================
-// LOVE HEART — EDIÇÃO REFINADA
-// ========================================
+// ==========================================
+// LOVE HEART — VERSÃO ORIGINAL APROVADA
+// ÚNICA CORREÇÃO: LIMITAR AS PALAVRAS
+// AO FORMATO DO CORAÇÃO
+// ==========================================
 
-const CONFIG = {
-    largura: 800,
-    altura: 800,
-    escala: 21,
-    deslocamentoY: 20,
+// CONFIGURAÇÕES ORIGINAIS
 
-    fundo: "#060208",
+const SC = 21;
+const OY = 20;
 
-    // Formação mais suave
-    duracao: 15000,
-    movimento: 750,
-    espera: 3500,
+const DURATION = 10;
+const TICK = 16;
+const ANIM = 42;
+const LIFT = 34;
+const GAP = 7;
 
-    // Letras legíveis
-    tamanhos: [12, 13, 14],
-    alturaLinha: 21,
-    espaco: 5,
+const SIZES = [10, 11, 12, 13];
 
-    // Efeitos
-    subida: 30,
-    brilho: 3
-};
+const FONT = "Arial";
+const BG = "#060208";
+
+const TEMPO_PARADO = 3500;
+
+const BRILHO = 5;
+const INTENSIDADE_BRILHO = 0.38;
+
+// ==========================================
+// CANVAS
+// ==========================================
 
 const canvas = document.getElementById(
     "heart-canvas"
@@ -34,633 +38,703 @@ const canvas = document.getElementById(
 
 const ctx = canvas.getContext("2d");
 
+const W = 800;
+const H = 800;
+
 const DPR = Math.min(
     window.devicePixelRatio || 1,
     3
 );
 
-canvas.width = CONFIG.largura * DPR;
-canvas.height = CONFIG.altura * DPR;
-
-canvas.style.width = "100%";
-canvas.style.height = "100%";
+canvas.width = W * DPR;
+canvas.height = H * DPR;
 
 ctx.setTransform(
     DPR, 0, 0, DPR,
-    400 * DPR, 400 * DPR
+    (W / 2) * DPR,
+    (H / 2) * DPR
 );
 
 ctx.textAlign = "center";
 ctx.textBaseline = "middle";
 
-// ========================================
-// IDIOMAS
-// ========================================
+// ==========================================
+// FRASES ORIGINAIS
+// ==========================================
 
-const FRASES = [
-    "Eu te amo",
+const PHRASES = [
     "I love you",
+    "Seni seviyorum",
     "Te amo",
     "Je t'aime",
-    "Ti amo",
     "Ich liebe dich",
-    "Seni seviyorum",
-    "Kocham cię",
-    "Ik hou van jou",
-    "Jag älskar dig",
-    "Aku cinta kamu",
-    "Anh yêu em",
-    "Te iubesc",
-    "Mahal kita",
-    "Volim te",
-    "Szeretlek",
-    "Jeg elsker deg",
-    "Miluji tě",
-    "Aishiteru",
+    "Ti amo",
+    "Eu te amo",
     "Я тебя люблю",
     "사랑해",
     "愛してる",
     "我爱你",
+    "मैं तुमसे प्यार करता हूँ",
     "Σ' αγαπώ",
-    "Я тебе кохаю",
-    "Te quiero",
-    "Eu gosto de você",
-    "T'estimo",
-    "Nakupenda",
-    "Mina rakastan sinua"
+    "Ik hou van jou",
+    "Jag älskar dig",
+    "Kocham cię",
+    "ฉันรักเธอ",
+    "Anh yêu em",
+    "Aku cinta kamu",
+    "Я тебе кохаю"
 ];
 
-// ========================================
-// ALEATORIEDADE FIXA
-// ========================================
+// ==========================================
+// ALEATORIEDADE ORIGINAL
+// ==========================================
 
-let semente = 1122;
+let seed = 11;
 
-function aleatorio() {
-    semente = (
-        Math.imul(semente, 1664525)
+function random() {
+    seed = (
+        Math.imul(1664525, seed)
         + 1013904223
     ) >>> 0;
 
-    return semente / 4294967296;
+    return seed / 4294967296;
 }
 
-function numero(min, max) {
-    return min + aleatorio() * (max - min);
+function uniform(a, b) {
+    return a + random() * (b - a);
 }
 
-function misturar(lista) {
-    const copia = [...lista];
+function choice(array) {
+    return array[
+        Math.floor(random() * array.length)
+    ];
+}
 
-    for (let i = copia.length - 1; i > 0; i--) {
-        const j = Math.floor(
-            aleatorio() * (i + 1)
-        );
+function shuffle(array) {
+    const result = [...array];
 
-        [copia[i], copia[j]] = [
-            copia[j], copia[i]
+    for (let i = result.length - 1; i > 0; i--) {
+        const j = Math.floor(random() * (i + 1));
+
+        [result[i], result[j]] = [
+            result[j],
+            result[i]
         ];
     }
 
-    return copia;
+    return result;
 }
 
-function limitar(x) {
-    return Math.max(0, Math.min(1, x));
+// ==========================================
+// CORES ORIGINAIS
+// ==========================================
+
+function clamp(v) {
+    return Math.max(0, Math.min(1, v));
 }
 
-function interpolar(a, b, v) {
+function mix(a, b, k) {
     return a.map(
-        (x, i) => x + (b[i] - x) * v
+        (v, i) => v + (b[i] - v) * k
     );
 }
 
-function corRGB(c) {
-    return "rgb(" + c.map(
-        v => Math.round(limitar(v) * 255)
-    ).join(",") + ")";
+function dim(c, k) {
+    return c.map(v => v * k);
 }
 
-// ========================================
-// CORAÇÃO MATEMÁTICO ORIGINAL
-// ========================================
+function rgb(c) {
+    const values = c.map(
+        v => Math.round(clamp(v) * 255)
+    );
 
-function coracao(t) {
-    const x = 16 * Math.sin(t) ** 3;
+    return `rgb(${values.join(",")})`;
+}
+
+function hexToRGB(hex) {
+    return [1, 3, 5].map(
+        i => parseInt(
+            hex.slice(i, i + 2), 16
+        ) / 255
+    );
+}
+
+const BGC = hexToRGB(BG);
+
+const FLASH = [1, 0.78, 0.78];
+
+// ==========================================
+// FORMATO MATEMÁTICO ORIGINAL
+// ==========================================
+
+function heart(a) {
+    const x = 16 * Math.sin(a) ** 3;
 
     const y =
-        13 * Math.cos(t)
-        - 5 * Math.cos(2 * t)
-        - 2 * Math.cos(3 * t)
-        - Math.cos(4 * t);
+        13 * Math.cos(a)
+        - 5 * Math.cos(2 * a)
+        - 2 * Math.cos(3 * a)
+        - Math.cos(4 * a);
 
-    return {
-        x: x * CONFIG.escala,
-        y: y * CONFIG.escala
-            + CONFIG.deslocamentoY
-    };
+    return [
+        x * SC,
+        y * SC + OY
+    ];
 }
 
-const pontos = [];
+const POLY = [];
 
-for (let i = 0; i < 1440; i++) {
-    pontos.push(
-        coracao(i * Math.PI * 2 / 1440)
+for (let i = 0; i < 720; i++) {
+    POLY.push(
+        heart(2 * Math.PI * i / 720)
     );
 }
 
-const minimoY = Math.min(
-    ...pontos.map(p => p.y)
+const EDGES = POLY.map(
+    (p, i) => [
+        p,
+        POLY[(i + 1) % POLY.length]
+    ]
 );
 
-const maximoY = Math.max(
-    ...pontos.map(p => p.y)
+const YMAX = Math.max(
+    ...POLY.map(p => p[1])
 );
 
-const centroY = (minimoY + maximoY) / 2;
+const YMIN = Math.min(
+    ...POLY.map(p => p[1])
+);
 
-// Contorno usado como limite absoluto
-const mascara = new Path2D();
+const CY = (YMAX + YMIN) / 2;
 
-pontos.forEach((p, i) => {
+// ==========================================
+// NOVO: MÁSCARA DO CORAÇÃO
+// ==========================================
+
+// Usa exatamente o mesmo contorno
+// matemático da versão original.
+//
+// As letras continuam nos mesmos lugares.
+// Somente as partes que ultrapassarem
+// o desenho serão escondidas.
+
+const HEART_MASK = new Path2D();
+
+POLY.forEach((p, i) => {
+    const x = p[0];
+    const y = -p[1];
+
     if (i === 0) {
-        mascara.moveTo(p.x, -p.y);
+        HEART_MASK.moveTo(x, y);
     } else {
-        mascara.lineTo(p.x, -p.y);
+        HEART_MASK.lineTo(x, y);
     }
 });
 
-mascara.closePath();
+HEART_MASK.closePath();
 
-// ========================================
-// INTERSEÇÃO HORIZONTAL
-// ========================================
+// ==========================================
+// INTERSEÇÕES ORIGINAIS
+// ==========================================
 
-function intervalos(y) {
+function spans(y) {
     const xs = [];
 
-    for (let i = 0; i < pontos.length; i++) {
-        const a = pontos[i];
-        const b = pontos[(i + 1) % pontos.length];
-
+    for (const [[x1, y1], [x2, y2]] of EDGES) {
         if (
-            (a.y <= y && y < b.y) ||
-            (b.y <= y && y < a.y)
+            (y1 <= y && y < y2)
+            || (y2 <= y && y < y1)
         ) {
             xs.push(
-                a.x +
-                (y - a.y) *
-                (b.x - a.x) /
-                (b.y - a.y)
+                x1 + (y - y1)
+                * (x2 - x1) / (y2 - y1)
             );
         }
     }
 
     xs.sort((a, b) => a - b);
 
-    const resultado = [];
+    const result = [];
 
     for (let i = 0; i + 1 < xs.length; i += 2) {
-        resultado.push([
-            xs[i], xs[i + 1]
+        result.push([
+            xs[i],
+            xs[i + 1]
         ]);
     }
 
-    return resultado;
+    return result;
 }
 
-// Obtém regiões seguras para cada linha
-function faixasSeguras(y, altura = 17) {
-    const amostras = [
-        y - altura / 2,
-        y - altura / 4,
-        y,
-        y + altura / 4,
-        y + altura / 2
-    ];
+function intersect(A, B) {
+    const out = [];
 
-    let atuais = intervalos(amostras[0]);
+    for (const a of A) {
+        for (const b of B) {
+            const lo = Math.max(a[0], b[0]);
+            const hi = Math.min(a[1], b[1]);
 
-    for (const amostra of amostras.slice(1)) {
-        const proximas = intervalos(amostra);
-        const novas = [];
-
-        for (const [a, b] of atuais) {
-            for (const [c, d] of proximas) {
-                const inicio = Math.max(a, c);
-                const fim = Math.min(b, d);
-
-                if (fim > inicio) {
-                    novas.push([inicio, fim]);
-                }
+            if (hi - lo > 14) {
+                out.push([lo, hi]);
             }
         }
-
-        atuais = novas;
     }
 
-    return atuais
-        .map(([a, b]) => [a + 3, b - 3])
-        .filter(([a, b]) => b - a >= 20);
+    return out;
 }
 
-// ========================================
-// FONTES E MEDIDAS
-// ========================================
+// ==========================================
+// FONTES ORIGINAIS
+// ==========================================
 
-function definirFonte(tamanho) {
-    ctx.font =
-        `bold ${tamanho}px Arial, sans-serif`;
+function setFont(size) {
+    ctx.font = `bold ${size}px ${FONT}`;
 }
 
-function larguraTexto(frase, tamanho) {
-    definirFonte(tamanho);
-
-    return ctx.measureText(frase).width;
+function measureText(text, size) {
+    setFont(size);
+    return ctx.measureText(text).width;
 }
 
-// ========================================
-// DISTRIBUIÇÃO DAS FRASES
-// ========================================
+const ROW_H = 23;
+const HALF = ROW_H / 2;
 
-function criarCoracao() {
-    const palavras = [];
-    let fila = [];
+// ==========================================
+// DISTÂNCIA ORIGINAL
+// ==========================================
 
-    // Alterna idiomas para evitar
-    // repetições consecutivas.
-    function proximaRodada() {
-        fila = misturar(FRASES);
-    }
+function mathDist(x, y) {
+    return Math.hypot(
+        x / (16 * SC),
+        (y - CY) / (14.5 * SC)
+    );
+}
 
-    proximaRodada();
+// ==========================================
+// CONSTRUÇÃO ORIGINAL DO CORAÇÃO
+// ==========================================
 
-    let ultimaFrase = "";
+function build() {
+    const placed = [];
 
-    function candidatas() {
-        if (fila.length < 5) {
-            proximaRodada();
+    let phraseOrder = shuffle(PHRASES);
+    let phraseIndex = 0;
+
+    function nextPhrase() {
+        if (phraseIndex >= phraseOrder.length) {
+            phraseOrder = shuffle(PHRASES);
+            phraseIndex = 0;
         }
 
-        return [
-            ...fila.slice(0, 12),
-            ...FRASES.filter(f =>
-                f.length <= 9
-            )
-        ];
+        return phraseOrder[phraseIndex++];
     }
 
-    const margem = 4;
+    let y = YMAX - HALF;
 
-    for (
-        let y = maximoY - 10;
-        y > minimoY + 10;
-        y -= CONFIG.alturaLinha
-    ) {
-        const regioes = faixasSeguras(y);
+    while (y > YMIN + HALF) {
+        const row = intersect(
+            spans(y + HALF),
+            spans(y - HALF)
+        );
 
-        for (const [inicio, fim] of regioes) {
-            const disponivel =
-                fim - inicio - margem * 2;
+        for (let [lo, hi] of row) {
+            lo += 4;
+            hi -= 4;
 
-            if (disponivel < 25) continue;
+            let cur = lo + uniform(0, 8);
+            const line = [];
 
-            const linha = [];
-            let cursor = inicio + margem;
+            while (true) {
+                let fit = null;
 
-            while (cursor < fim - margem) {
-                const restante =
-                    fim - margem - cursor;
+                for (let k = 0; k < 10; k++) {
+                    const text = nextPhrase();
+                    const size = choice(SIZES);
+                    const w = measureText(
+                        text, size
+                    );
 
-                const possibilidades = [];
-
-                for (const frase of candidatas()) {
-                    if (frase === ultimaFrase) {
-                        continue;
-                    }
-
-                    for (
-                        const tamanho of
-                        CONFIG.tamanhos
-                    ) {
-                        const largura = larguraTexto(
-                            frase, tamanho
-                        );
-
-                        if (largura <= restante) {
-                            possibilidades.push({
-                                frase,
-                                tamanho,
-                                largura
-                            });
-                        }
+                    if (cur + w <= hi) {
+                        fit = { text, size, w };
+                        break;
                     }
                 }
 
-                if (!possibilidades.length) {
+                if (!fit) {
                     break;
                 }
 
-                // Escolhe frases variadas que
-                // aproveitam melhor o espaço.
-                const alvo = Math.min(
-                    restante,
-                    numero(45, 110)
-                );
+                const { text, size, w } = fit;
 
-                possibilidades.sort((a, b) => {
-                    const custoA =
-                        Math.abs(a.largura - alvo)
-                        + (14 - a.tamanho) * 3;
-
-                    const custoB =
-                        Math.abs(b.largura - alvo)
-                        + (14 - b.tamanho) * 3;
-
-                    return custoA - custoB;
+                line.push({
+                    x: cur + w / 2,
+                    text,
+                    size,
+                    w
                 });
 
-                const quantidadeOpcoes = Math.min(
-                    5, possibilidades.length
-                );
-
-                const escolha = possibilidades[
-                    Math.floor(
-                        aleatorio() * quantidadeOpcoes
-                    )
-                ];
-
-                // Evita repetição imediata
-                ultimaFrase = escolha.frase;
-
-                const indice = fila.indexOf(
-                    escolha.frase
-                );
-
-                if (indice !== -1) {
-                    fila.splice(indice, 1);
-                }
-
-                linha.push({
-                    x: cursor + escolha.largura / 2,
-                    y,
-                    texto: escolha.frase,
-                    tamanho: escolha.tamanho,
-                    largura: escolha.largura
-                });
-
-                cursor +=
-                    escolha.largura +
-                    CONFIG.espaco;
+                cur += w + GAP;
             }
 
-            if (!linha.length) continue;
+            if (line.length === 0) {
+                continue;
+            }
 
-            // Centraliza a linha dentro
-            // da região disponível.
-            const esquerda =
-                linha[0].x -
-                linha[0].largura / 2;
+            if (line.length > 1) {
+                const last = line[line.length - 1];
 
-            const ultima = linha[
-                linha.length - 1
-            ];
+                const left = hi - (
+                    last.x + last.w / 2
+                );
 
-            const direita =
-                ultima.x + ultima.largura / 2;
+                line.forEach((item, i) => {
+                    item.x += (
+                        left * i
+                        / (line.length - 1)
+                    );
+                });
+            } else {
+                line[0].x = (lo + hi) / 2;
+            }
 
-            const deslocamento =
-                (inicio + fim - esquerda - direita) / 2;
-
-            linha.forEach(p => {
-                p.x += deslocamento;
-            });
-
-            linha.forEach((p, i) => {
-                p.borda =
-                    i === 0 ||
-                    i === linha.length - 1;
-
-                const distancia = Math.min(
-                    1,
-                    Math.hypot(
-                        p.x / (16 * CONFIG.escala),
-                        (p.y - centroY) /
-                        (14.5 * CONFIG.escala)
+            line.forEach((item, i) => {
+                placed.push({
+                    x: item.x,
+                    y,
+                    text: item.text,
+                    size: item.size,
+                    edge: (
+                        i === 0
+                        || i === line.length - 1
                     )
-                );
-
-                // Tons de vermelho vivos,
-                // preservando variação natural.
-                const vinho = [0.72, 0.035, 0.12];
-                const vermelho = [0.99, 0.12, 0.22];
-                const claro = [1, 0.22, 0.31];
-
-                let cor = interpolar(
-                    vinho,
-                    vermelho,
-                    0.35 + distancia * 0.65
-                );
-
-                cor = interpolar(
-                    cor,
-                    claro,
-                    numero(0, 0.22) +
-                    (p.borda ? 0.18 : 0)
-                ).map(limitar);
-
-                palavras.push({
-                    ...p,
-                    cor,
-                    distancia,
-                    dx: numero(-8, 8)
                 });
             });
         }
+
+        y -= ROW_H;
+    }
+
+    // Tons da versão aprovada
+
+    const wine = [0.76, 0.055, 0.14];
+    const crimson = [1.0, 0.14, 0.23];
+    const blood = [1.0, 0.24, 0.32];
+
+    for (const p of placed) {
+        const rad = Math.min(
+            1,
+            mathDist(p.x, p.y)
+        );
+
+        let base = mix(
+            wine,
+            crimson,
+            0.25 + 0.75 * rad
+        );
+
+        base = mix(
+            base,
+            blood,
+            uniform(0, 0.22)
+            + (p.edge ? 0.22 : 0)
+        );
+
+        p.color = base.map(clamp);
+        p.rad = rad;
     }
 
     // Contorno primeiro
-    const bordas = palavras.filter(
-        p => p.borda
+
+    const edges = placed.filter(
+        p => p.edge
     );
 
     // Interior depois
-    const interior = palavras.filter(
-        p => !p.borda
+
+    const inner = placed.filter(
+        p => !p.edge
     );
 
-    bordas.sort((a, b) => {
-        const aa = (
-            Math.atan2(
-                a.x, a.y - centroY
-            ) + 2 * Math.PI
+    edges.sort((a, b) => {
+        const angleA = (
+            Math.atan2(a.x, a.y - CY)
+            + 2 * Math.PI
         ) % (2 * Math.PI);
 
-        const bb = (
-            Math.atan2(
-                b.x, b.y - centroY
-            ) + 2 * Math.PI
+        const angleB = (
+            Math.atan2(b.x, b.y - CY)
+            + 2 * Math.PI
         ) % (2 * Math.PI);
 
-        return aa - bb;
+        return angleA - angleB;
     });
 
-    interior.forEach(p => {
-        p.ordem = -p.distancia +
-            numero(0, 0.045);
-    });
+    for (const p of inner) {
+        p.sortValue = (
+            -p.rad + uniform(0, 0.08)
+        );
+    }
 
-    interior.sort(
-        (a, b) => a.ordem - b.ordem
+    inner.sort(
+        (a, b) => a.sortValue - b.sortValue
     );
 
-    return [...bordas, ...interior];
+    return [...edges, ...inner];
 }
 
-const PALAVRAS = criarCoracao();
+// ==========================================
+// TEMPOS ORIGINAIS
+// ==========================================
 
-// ========================================
-// DESENHO DAS LETRAS
-// ========================================
+const ORDER = build();
 
-const FUNDO_RGB = [
-    6 / 255,
-    2 / 255,
-    8 / 255
-];
+const FORMATION_MS = DURATION * 1000;
+const FINISH_MS = ANIM * TICK;
 
-const FLASH = [1, 0.75, 0.79];
+const CYCLE_MS = (
+    FORMATION_MS
+    + FINISH_MS
+    + TEMPO_PARADO
+);
 
-function desenharTexto(p, x, y, cor) {
-    definirFonte(p.tamanho);
+for (const p of ORDER) {
+    p.dx = uniform(-10, 10);
+}
 
-    ctx.shadowColor = "rgba(255,45,75,0.48)";
-    ctx.shadowBlur = CONFIG.brilho;
+// ==========================================
+// DESENHO ORIGINAL DAS LETRAS
+// ==========================================
 
-    ctx.fillStyle = corRGB(cor);
-    ctx.fillText(p.texto, x, y);
+function drawText(
+    text,
+    size,
+    x,
+    y,
+    color,
+    glow = true
+) {
+    setFont(size);
+
+    ctx.fillStyle = rgb(color);
+
+    if (glow) {
+        ctx.shadowColor =
+            "rgba(255, 35, 65, 0.75)";
+
+        ctx.shadowBlur = BRILHO;
+    } else {
+        ctx.shadowBlur = 0;
+    }
+
+    ctx.fillText(text, x, y);
 
     ctx.shadowBlur = 0;
     ctx.shadowColor = "transparent";
 }
 
-function desenharPalavra(p, idade, destaque) {
-    if (idade >= CONFIG.movimento) {
-        const cor = destaque
-            ? interpolar(p.cor, FLASH, 0.58)
-            : p.cor;
+// ==========================================
+// FRASE SURGINDO
+// ==========================================
 
-        desenharTexto(
-            p,
-            p.x,
-            -p.y,
-            cor
-        );
-
-        return;
-    }
-
-    const progresso = limitar(
-        idade / CONFIG.movimento
+function drawPhrase(p, elapsed) {
+    const u = clamp(
+        elapsed / FINISH_MS
     );
 
-    const suavidade =
-        1 - Math.pow(1 - progresso, 3);
+    const e = 1 - Math.pow(1 - u, 3);
 
-    const x = p.x +
-        p.dx * (1 - suavidade);
+    const x = p.x + p.dx * (1 - e);
+    const y = -p.y - (1 - e) * LIFT;
 
-    const y = -p.y -
-        CONFIG.subida * (1 - suavidade);
-
-    const brilhoEntrada =
-        0.7 * Math.sin(
-            Math.PI * limitar(
-                (progresso - 0.55) / 0.45
+    const flash = (
+        0.75
+        * Math.sin(
+            Math.PI * clamp(
+                (u - 0.55) / 0.45
             )
-        );
-
-    const cor = interpolar(
-        interpolar(
-            FUNDO_RGB,
-            p.cor,
-            suavidade ** 1.5
-        ),
-        FLASH,
-        brilhoEntrada
-    );
-
-    desenharTexto(p, x, y, cor);
-}
-
-// ========================================
-// ANIMAÇÃO INFINITA
-// ========================================
-
-const CICLO =
-    CONFIG.duracao +
-    CONFIG.movimento +
-    CONFIG.espera;
-
-let inicioCiclo = null;
-
-function animar(agora) {
-    if (inicioCiclo === null) {
-        inicioCiclo = agora;
-    }
-
-    const tempo =
-        (agora - inicioCiclo) % CICLO;
-
-    // Limpa completamente o canvas
-    ctx.fillStyle = CONFIG.fundo;
-
-    ctx.fillRect(-400, -400, 800, 800);
-
-    // Proteção para nenhuma letra
-    // ultrapassar o coração
-    ctx.save();
-    ctx.clip(mascara);
-
-    const progresso = limitar(
-        tempo / CONFIG.duracao
-    );
-
-    const quantidade = Math.min(
-        PALAVRAS.length,
-        Math.floor(
-            PALAVRAS.length * progresso
         )
     );
 
-    const completo =
-        tempo >= CONFIG.duracao +
-        CONFIG.movimento;
+    const col = mix(
+        mix(
+            BGC,
+            p.color,
+            e ** 1.5
+        ),
+        FLASH,
+        flash
+    );
 
-    const destaque = Math.floor(
-        tempo / 220
-    ) % Math.max(1, PALAVRAS.length);
+    // Halo original
 
-    for (let i = 0; i < quantidade; i++) {
-        const p = PALAVRAS[i];
+    drawText(
+        p.text,
+        p.size + 1,
+        x,
+        y,
+        mix(
+            BGC,
+            dim(p.color, 0.40),
+            e * e
+        ),
+        false
+    );
 
-        const nascimento =
-            i * CONFIG.duracao /
-            PALAVRAS.length;
+    // Texto principal
 
-        const idade = tempo - nascimento;
+    drawText(
+        p.text,
+        p.size,
+        x,
+        y,
+        col,
+        true
+    );
+}
 
-        desenharPalavra(
-            p,
-            idade,
-            completo && i === destaque
-        );
+// ==========================================
+// FRASE COMPLETA
+// ==========================================
+
+function drawFinished(
+    p,
+    color = p.color
+) {
+    ctx.save();
+
+    ctx.shadowColor =
+        "rgba(255, 35, 65, 0.6)";
+
+    ctx.shadowBlur =
+        BRILHO * INTENSIDADE_BRILHO;
+
+    setFont(p.size);
+
+    ctx.fillStyle = rgb(color);
+
+    ctx.fillText(
+        p.text,
+        p.x,
+        -p.y
+    );
+
+    ctx.restore();
+}
+
+// ==========================================
+// ANIMAÇÃO INFINITA ORIGINAL
+// ==========================================
+
+let cycleStart = null;
+
+function frame(now) {
+    if (cycleStart === null) {
+        cycleStart = now;
     }
+
+    let elapsed = now - cycleStart;
+
+    if (elapsed >= CYCLE_MS) {
+        cycleStart = now;
+        elapsed = 0;
+    }
+
+    // Limpa a tela normalmente
+
+    ctx.fillStyle = BG;
+
+    ctx.fillRect(
+        -W / 2,
+        -H / 2,
+        W,
+        H
+    );
+
+    // ======================================
+    // ÚNICA ALTERAÇÃO DA VERSÃO ORIGINAL
+    // ======================================
+
+    // Protege o contorno matemático.
+    // Nenhuma letra poderá ser desenhada
+    // visualmente fora deste formato.
+
+    ctx.save();
+    ctx.clip(HEART_MASK);
+
+    // ======================================
+    // RESTANTE DA ANIMAÇÃO ORIGINAL
+    // ======================================
+
+    const progress = clamp(
+        elapsed / FORMATION_MS
+    );
+
+    const count = Math.min(
+        ORDER.length,
+        Math.floor(
+            progress * ORDER.length
+        )
+    );
+
+    const complete = (
+        elapsed >=
+        FORMATION_MS + FINISH_MS
+    );
+
+    const shimmerIndex = Math.floor(
+        elapsed / 140
+    ) % Math.max(1, ORDER.length);
+
+    const phase = (elapsed % 140) / 140;
+
+    for (let i = 0; i < count; i++) {
+        const p = ORDER[i];
+
+        const born = (
+            i * FORMATION_MS
+            / ORDER.length
+        );
+
+        const age = elapsed - born;
+
+        if (age >= FINISH_MS) {
+            if (
+                complete
+                && i === shimmerIndex
+            ) {
+                const brightness = (
+                    0.6
+                    * Math.sin(
+                        Math.PI * phase
+                    )
+                );
+
+                drawFinished(
+                    p,
+                    mix(
+                        p.color,
+                        FLASH,
+                        brightness
+                    )
+                );
+            } else {
+                drawFinished(p);
+            }
+        } else if (age >= 0) {
+            drawPhrase(p, age);
+        }
+    }
+
+    // Finaliza a máscara sem afetar
+    // os próximos quadros da animação.
 
     ctx.restore();
 
-    requestAnimationFrame(animar);
+    requestAnimationFrame(frame);
 }
 
-requestAnimationFrame(animar);
+// ==========================================
+// INICIAR
+// ==========================================
 
+requestAnimationFrame(frame);
