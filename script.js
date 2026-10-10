@@ -1,517 +1,666 @@
 
 "use strict";
 
-// LOVE HEART — preenchimento compacto e limite real do coração
-const CFG = {
-  width: 800, height: 800, scale: 21, offsetY: 20,
-  background: "#060208", font: "Arial, sans-serif",
-  formation: 10000, settle: 672, hold: 3500,
-  gap: 3, rowHeight: 16, lift: 34
+// ========================================
+// LOVE HEART — EDIÇÃO REFINADA
+// ========================================
+
+const CONFIG = {
+    largura: 800,
+    altura: 800,
+    escala: 21,
+    deslocamentoY: 20,
+
+    fundo: "#060208",
+
+    // Formação mais suave
+    duracao: 15000,
+    movimento: 750,
+    espera: 3500,
+
+    // Letras legíveis
+    tamanhos: [12, 13, 14],
+    alturaLinha: 21,
+    espaco: 5,
+
+    // Efeitos
+    subida: 30,
+    brilho: 3
 };
 
-const canvas = document.getElementById("heart-canvas");
-const ctx = canvas.getContext("2d");
-const dpr = Math.min(window.devicePixelRatio || 1, 3);
-canvas.width = CFG.width * dpr;
-canvas.height = CFG.height * dpr;
+const canvas = document.getElementById(
+    "heart-canvas"
+);
 
-// Tamanho visual controlado pelo CSS
+const ctx = canvas.getContext("2d");
+
+const DPR = Math.min(
+    window.devicePixelRatio || 1,
+    3
+);
+
+canvas.width = CONFIG.largura * DPR;
+canvas.height = CONFIG.altura * DPR;
+
 canvas.style.width = "100%";
 canvas.style.height = "100%";
 
 ctx.setTransform(
-  dpr, 0, 0, dpr,
-  CFG.width / 2 * dpr,
-  CFG.height / 2 * dpr
+    DPR, 0, 0, DPR,
+    400 * DPR, 400 * DPR
 );
 
 ctx.textAlign = "center";
-ctx.textBaseline = "alphabetic";
+ctx.textBaseline = "middle";
 
-const phrases = [
-  "I love you", "Seni seviyorum", "Te amo", "Je t'aime",
-  "Ich liebe dich", "Ti amo", "Eu te amo", "Я тебя люблю",
-  "사랑해", "愛してる", "我爱你", "मैं तुमसे प्यार करता हूँ",
-  "Σ' αγαπώ", "Ik hou van jou", "Jag älskar dig", "Kocham cię",
-  "ฉันรักเธอ", "Anh yêu em", "Aku cinta kamu", "Я тебе кохаю"
+// ========================================
+// IDIOMAS
+// ========================================
+
+const FRASES = [
+    "Eu te amo",
+    "I love you",
+    "Te amo",
+    "Je t'aime",
+    "Ti amo",
+    "Ich liebe dich",
+    "Seni seviyorum",
+    "Kocham cię",
+    "Ik hou van jou",
+    "Jag älskar dig",
+    "Aku cinta kamu",
+    "Anh yêu em",
+    "Te iubesc",
+    "Mahal kita",
+    "Volim te",
+    "Szeretlek",
+    "Jeg elsker deg",
+    "Miluji tě",
+    "Aishiteru",
+    "Я тебя люблю",
+    "사랑해",
+    "愛してる",
+    "我爱你",
+    "Σ' αγαπώ",
+    "Я тебе кохаю",
+    "Te quiero",
+    "Eu gosto de você",
+    "T'estimo",
+    "Nakupenda",
+    "Mina rakastan sinua"
 ];
 
-const shortPhrases = [
-  "Te amo", "Ti amo", "사랑해", "愛してる",
-  "我爱你", "Eu te amo", "I love you"
-];
+// ========================================
+// ALEATORIEDADE FIXA
+// ========================================
 
-// ==========================================
-// ALEATORIEDADE
-// ==========================================
+let semente = 1122;
 
-let seed = 11;
+function aleatorio() {
+    semente = (
+        Math.imul(semente, 1664525)
+        + 1013904223
+    ) >>> 0;
 
-const rand = () => (
-  (seed = (
-    Math.imul(seed, 1664525) + 1013904223
-  ) >>> 0) / 4294967296
-);
-
-const range = (a, b) => a + rand() * (b - a);
-const clamp = n => Math.max(0, Math.min(1, n));
-
-const mix = (a, b, t) =>
-  a.map((x, i) => x + (b[i] - x) * t);
-
-const cssColor = a =>
-  `rgb(${a.map(x => Math.round(clamp(x) * 255)).join(",")})`;
-
-const BG = [6 / 255, 2 / 255, 8 / 255];
-const FLASH = [1, 0.78, 0.78];
-
-// ==========================================
-// FORMATO DO CORAÇÃO
-// ==========================================
-
-function heart(t) {
-  const x = 16 * Math.sin(t) ** 3;
-
-  const y =
-    13 * Math.cos(t)
-    - 5 * Math.cos(2 * t)
-    - 2 * Math.cos(3 * t)
-    - Math.cos(4 * t);
-
-  return [
-    x * CFG.scale,
-    y * CFG.scale + CFG.offsetY
-  ];
+    return semente / 4294967296;
 }
 
-const points = Array.from(
-  { length: 1440 },
-  (_, i) => heart(i * Math.PI * 2 / 1440)
+function numero(min, max) {
+    return min + aleatorio() * (max - min);
+}
+
+function misturar(lista) {
+    const copia = [...lista];
+
+    for (let i = copia.length - 1; i > 0; i--) {
+        const j = Math.floor(
+            aleatorio() * (i + 1)
+        );
+
+        [copia[i], copia[j]] = [
+            copia[j], copia[i]
+        ];
+    }
+
+    return copia;
+}
+
+function limitar(x) {
+    return Math.max(0, Math.min(1, x));
+}
+
+function interpolar(a, b, v) {
+    return a.map(
+        (x, i) => x + (b[i] - x) * v
+    );
+}
+
+function corRGB(c) {
+    return "rgb(" + c.map(
+        v => Math.round(limitar(v) * 255)
+    ).join(",") + ")";
+}
+
+// ========================================
+// CORAÇÃO MATEMÁTICO ORIGINAL
+// ========================================
+
+function coracao(t) {
+    const x = 16 * Math.sin(t) ** 3;
+
+    const y =
+        13 * Math.cos(t)
+        - 5 * Math.cos(2 * t)
+        - 2 * Math.cos(3 * t)
+        - Math.cos(4 * t);
+
+    return {
+        x: x * CONFIG.escala,
+        y: y * CONFIG.escala
+            + CONFIG.deslocamentoY
+    };
+}
+
+const pontos = [];
+
+for (let i = 0; i < 1440; i++) {
+    pontos.push(
+        coracao(i * Math.PI * 2 / 1440)
+    );
+}
+
+const minimoY = Math.min(
+    ...pontos.map(p => p.y)
 );
 
-const yMax = Math.max(...points.map(p => p[1]));
-const yMin = Math.min(...points.map(p => p[1]));
+const maximoY = Math.max(
+    ...pontos.map(p => p.y)
+);
 
-const centerY = (yMax + yMin) / 2;
+const centroY = (minimoY + maximoY) / 2;
 
-const outline = new Path2D();
+// Contorno usado como limite absoluto
+const mascara = new Path2D();
 
-points.forEach(([x, y], i) => {
-  if (i === 0) {
-    outline.moveTo(x, -y);
-  } else {
-    outline.lineTo(x, -y);
-  }
+pontos.forEach((p, i) => {
+    if (i === 0) {
+        mascara.moveTo(p.x, -p.y);
+    } else {
+        mascara.lineTo(p.x, -p.y);
+    }
 });
 
-outline.closePath();
+mascara.closePath();
 
-// ==========================================
-// INTERSEÇÕES
-// ==========================================
+// ========================================
+// INTERSEÇÃO HORIZONTAL
+// ========================================
 
-function spans(y) {
-  const xs = [];
+function intervalos(y) {
+    const xs = [];
 
-  for (let i = 0; i < points.length; i++) {
-    const [ax, ay] = points[i];
-    const [bx, by] = points[(i + 1) % points.length];
+    for (let i = 0; i < pontos.length; i++) {
+        const a = pontos[i];
+        const b = pontos[(i + 1) % pontos.length];
 
-    if (
-      (ay <= y && y < by) ||
-      (by <= y && y < ay)
-    ) {
-      xs.push(
-        ax + (y - ay) * (bx - ax) / (by - ay)
-      );
-    }
-  }
-
-  xs.sort((a, b) => a - b);
-
-  const out = [];
-
-  for (let i = 0; i + 1 < xs.length; i += 2) {
-    out.push([xs[i], xs[i + 1]]);
-  }
-
-  return out;
-}
-
-function rowIntervals(y, ascent, descent, inset = 2) {
-  const ys = [
-    y - descent,
-    y + (ascent - descent) * 0.25,
-    y + (ascent - descent) * 0.5,
-    y + (ascent - descent) * 0.75,
-    y + ascent
-  ];
-
-  let intervals = spans(ys[0]);
-
-  for (const yy of ys.slice(1)) {
-    const next = [];
-
-    for (const [a, b] of intervals) {
-      for (const [c, d] of spans(yy)) {
-        const left = Math.max(a, c);
-        const right = Math.min(b, d);
-
-        if (right - left > 0) {
-          next.push([left, right]);
+        if (
+            (a.y <= y && y < b.y) ||
+            (b.y <= y && y < a.y)
+        ) {
+            xs.push(
+                a.x +
+                (y - a.y) *
+                (b.x - a.x) /
+                (b.y - a.y)
+            );
         }
-      }
     }
 
-    intervals = next;
-  }
+    xs.sort((a, b) => a - b);
 
-  return intervals
-    .map(([a, b]) => [a + inset, b - inset])
-    .filter(([a, b]) => b - a > 8);
-}
+    const resultado = [];
 
-// ==========================================
-// FONTES
-// ==========================================
-
-function font(size) {
-  ctx.font = `bold ${size}px ${CFG.font}`;
-}
-
-function measured(text, size) {
-  font(size);
-
-  const metrics = ctx.measureText(text);
-
-  return {
-    width: metrics.width,
-    ascent: metrics.actualBoundingBoxAscent || size * 0.9,
-    descent: metrics.actualBoundingBoxDescent || size * 0.3
-  };
-}
-
-function shuffle(a) {
-  a = [...a];
-
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(rand() * (i + 1));
-
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-
-  return a;
-}
-
-// ==========================================
-// CONSTRUÇÃO DO CORAÇÃO
-// ==========================================
-
-function build() {
-  const items = [];
-
-  const palette = [
-    [0.76, 0.055, 0.14],
-    [1, 0.14, 0.23],
-    [1, 0.24, 0.32]
-  ];
-
-  for (
-    let y = yMax - 7;
-    y > yMin + 7;
-    y -= CFG.rowHeight
-  ) {
-    const bands = rowIntervals(y, 11, 3);
-
-    for (const [start, end] of bands) {
-      let x = start;
-      const line = [];
-
-      while (end - x > 17) {
-        const budget = end - x;
-        const proposals = [];
-
-        const pool = shuffle([
-          ...phrases,
-          ...shortPhrases,
-          ...shortPhrases
+    for (let i = 0; i + 1 < xs.length; i += 2) {
+        resultado.push([
+            xs[i], xs[i + 1]
         ]);
-
-        for (const text of pool) {
-          for (const size of [11, 10, 9]) {
-            const met = measured(text, size);
-
-            if (met.width > budget) {
-              continue;
-            }
-
-            const safe = rowIntervals(
-              y,
-              met.ascent,
-              met.descent
-            );
-
-            const ok = safe.some(
-              ([a, b]) =>
-                x >= a - 0.001 &&
-                x + met.width <= b + 0.001
-            );
-
-            if (ok) {
-              proposals.push({
-                text,
-                size,
-                ...met
-              });
-            }
-          }
-        }
-
-        if (!proposals.length) {
-          x += 2;
-
-          if (x >= end - 17) {
-            break;
-          }
-
-          continue;
-        }
-
-        proposals.sort((a, b) => a.width - b.width);
-
-        let selected;
-
-        if (budget < 95) {
-          selected = proposals[proposals.length - 1];
-        } else {
-          selected = proposals[
-            Math.floor(
-              rand() * Math.min(proposals.length, 12)
-            )
-          ];
-        }
-
-        line.push({
-          x: x + selected.width / 2,
-          y,
-          text: selected.text,
-          size: selected.size,
-          width: selected.width,
-          ascent: selected.ascent,
-          descent: selected.descent
-        });
-
-        x += selected.width + CFG.gap;
-      }
-
-      // Distribuição sem ultrapassar o limite
-      if (line.length > 1) {
-        const last = line[line.length - 1];
-
-        const slack = Math.max(
-          0,
-          end - (last.x + last.width / 2)
-        );
-
-        const shift = slack / (line.length - 1);
-
-        if (shift <= 12) {
-          line.forEach((p, i) => {
-            p.x += shift * i;
-          });
-        }
-      }
-
-      line.forEach((p, i) => {
-        const edge = (
-          i === 0 ||
-          i === line.length - 1
-        );
-
-        const rad = Math.min(
-          1,
-          Math.hypot(
-            p.x / (16 * CFG.scale),
-            (p.y - centerY) / (14.5 * CFG.scale)
-          )
-        );
-
-        let color = mix(
-          palette[0],
-          palette[1],
-          0.25 + 0.75 * rad
-        );
-
-        color = mix(
-          color,
-          palette[2],
-          range(0, 0.18) + (edge ? 0.18 : 0)
-        ).map(clamp);
-
-        items.push({
-          ...p,
-          edge,
-          rad,
-          color,
-          dx: range(-10, 10)
-        });
-      });
     }
-  }
 
-  const border = items.filter(p => p.edge);
-  const inside = items.filter(p => !p.edge);
-
-  // Contorno primeiro
-  border.sort((a, b) => {
-    const angleA = (
-      Math.atan2(a.x, a.y - centerY) +
-      2 * Math.PI
-    ) % (2 * Math.PI);
-
-    const angleB = (
-      Math.atan2(b.x, b.y - centerY) +
-      2 * Math.PI
-    ) % (2 * Math.PI);
-
-    return angleA - angleB;
-  });
-
-  // Preenchimento de fora para dentro
-  inside.forEach(p => {
-    p.order = -p.rad + range(0, 0.05);
-  });
-
-  inside.sort((a, b) => a.order - b.order);
-
-  return [...border, ...inside];
+    return resultado;
 }
 
-// ==========================================
-// ELEMENTOS DA ANIMAÇÃO
-// ==========================================
+// Obtém regiões seguras para cada linha
+function faixasSeguras(y, altura = 17) {
+    const amostras = [
+        y - altura / 2,
+        y - altura / 4,
+        y,
+        y + altura / 4,
+        y + altura / 2
+    ];
 
-const ORDER = build();
+    let atuais = intervalos(amostras[0]);
 
-const total = (
-  CFG.formation +
-  CFG.settle +
-  CFG.hold
-);
+    for (const amostra of amostras.slice(1)) {
+        const proximas = intervalos(amostra);
+        const novas = [];
 
-function text(p, x, y, color, glow) {
-  font(p.size);
+        for (const [a, b] of atuais) {
+            for (const [c, d] of proximas) {
+                const inicio = Math.max(a, c);
+                const fim = Math.min(b, d);
 
-  ctx.fillStyle = cssColor(color);
+                if (fim > inicio) {
+                    novas.push([inicio, fim]);
+                }
+            }
+        }
 
-  ctx.shadowColor = glow
-    ? "rgba(255,40,72,.65)"
-    : "transparent";
+        atuais = novas;
+    }
 
-  ctx.shadowBlur = glow ? 3 : 0;
-
-  ctx.fillText(p.text, x, y);
-
-  ctx.shadowBlur = 0;
+    return atuais
+        .map(([a, b]) => [a + 3, b - 3])
+        .filter(([a, b]) => b - a >= 20);
 }
 
-// ==========================================
-// MOVIMENTO DAS FRASES
-// ==========================================
+// ========================================
+// FONTES E MEDIDAS
+// ========================================
 
-function draw(p, age, highlight = false) {
-  if (age >= CFG.settle) {
-    text(
-      p,
-      p.x,
-      -p.y,
-      highlight
-        ? mix(p.color, FLASH, 0.55)
-        : p.color,
-      true
+function definirFonte(tamanho) {
+    ctx.font =
+        `bold ${tamanho}px Arial, sans-serif`;
+}
+
+function larguraTexto(frase, tamanho) {
+    definirFonte(tamanho);
+
+    return ctx.measureText(frase).width;
+}
+
+// ========================================
+// DISTRIBUIÇÃO DAS FRASES
+// ========================================
+
+function criarCoracao() {
+    const palavras = [];
+    let fila = [];
+
+    // Alterna idiomas para evitar
+    // repetições consecutivas.
+    function proximaRodada() {
+        fila = misturar(FRASES);
+    }
+
+    proximaRodada();
+
+    let ultimaFrase = "";
+
+    function candidatas() {
+        if (fila.length < 5) {
+            proximaRodada();
+        }
+
+        return [
+            ...fila.slice(0, 12),
+            ...FRASES.filter(f =>
+                f.length <= 9
+            )
+        ];
+    }
+
+    const margem = 4;
+
+    for (
+        let y = maximoY - 10;
+        y > minimoY + 10;
+        y -= CONFIG.alturaLinha
+    ) {
+        const regioes = faixasSeguras(y);
+
+        for (const [inicio, fim] of regioes) {
+            const disponivel =
+                fim - inicio - margem * 2;
+
+            if (disponivel < 25) continue;
+
+            const linha = [];
+            let cursor = inicio + margem;
+
+            while (cursor < fim - margem) {
+                const restante =
+                    fim - margem - cursor;
+
+                const possibilidades = [];
+
+                for (const frase of candidatas()) {
+                    if (frase === ultimaFrase) {
+                        continue;
+                    }
+
+                    for (
+                        const tamanho of
+                        CONFIG.tamanhos
+                    ) {
+                        const largura = larguraTexto(
+                            frase, tamanho
+                        );
+
+                        if (largura <= restante) {
+                            possibilidades.push({
+                                frase,
+                                tamanho,
+                                largura
+                            });
+                        }
+                    }
+                }
+
+                if (!possibilidades.length) {
+                    break;
+                }
+
+                // Escolhe frases variadas que
+                // aproveitam melhor o espaço.
+                const alvo = Math.min(
+                    restante,
+                    numero(45, 110)
+                );
+
+                possibilidades.sort((a, b) => {
+                    const custoA =
+                        Math.abs(a.largura - alvo)
+                        + (14 - a.tamanho) * 3;
+
+                    const custoB =
+                        Math.abs(b.largura - alvo)
+                        + (14 - b.tamanho) * 3;
+
+                    return custoA - custoB;
+                });
+
+                const quantidadeOpcoes = Math.min(
+                    5, possibilidades.length
+                );
+
+                const escolha = possibilidades[
+                    Math.floor(
+                        aleatorio() * quantidadeOpcoes
+                    )
+                ];
+
+                // Evita repetição imediata
+                ultimaFrase = escolha.frase;
+
+                const indice = fila.indexOf(
+                    escolha.frase
+                );
+
+                if (indice !== -1) {
+                    fila.splice(indice, 1);
+                }
+
+                linha.push({
+                    x: cursor + escolha.largura / 2,
+                    y,
+                    texto: escolha.frase,
+                    tamanho: escolha.tamanho,
+                    largura: escolha.largura
+                });
+
+                cursor +=
+                    escolha.largura +
+                    CONFIG.espaco;
+            }
+
+            if (!linha.length) continue;
+
+            // Centraliza a linha dentro
+            // da região disponível.
+            const esquerda =
+                linha[0].x -
+                linha[0].largura / 2;
+
+            const ultima = linha[
+                linha.length - 1
+            ];
+
+            const direita =
+                ultima.x + ultima.largura / 2;
+
+            const deslocamento =
+                (inicio + fim - esquerda - direita) / 2;
+
+            linha.forEach(p => {
+                p.x += deslocamento;
+            });
+
+            linha.forEach((p, i) => {
+                p.borda =
+                    i === 0 ||
+                    i === linha.length - 1;
+
+                const distancia = Math.min(
+                    1,
+                    Math.hypot(
+                        p.x / (16 * CONFIG.escala),
+                        (p.y - centroY) /
+                        (14.5 * CONFIG.escala)
+                    )
+                );
+
+                // Tons de vermelho vivos,
+                // preservando variação natural.
+                const vinho = [0.72, 0.035, 0.12];
+                const vermelho = [0.99, 0.12, 0.22];
+                const claro = [1, 0.22, 0.31];
+
+                let cor = interpolar(
+                    vinho,
+                    vermelho,
+                    0.35 + distancia * 0.65
+                );
+
+                cor = interpolar(
+                    cor,
+                    claro,
+                    numero(0, 0.22) +
+                    (p.borda ? 0.18 : 0)
+                ).map(limitar);
+
+                palavras.push({
+                    ...p,
+                    cor,
+                    distancia,
+                    dx: numero(-8, 8)
+                });
+            });
+        }
+    }
+
+    // Contorno primeiro
+    const bordas = palavras.filter(
+        p => p.borda
     );
 
-    return;
-  }
-
-  const u = clamp(age / CFG.settle);
-  const e = 1 - (1 - u) ** 3;
-
-  const x = p.x + p.dx * (1 - e);
-  const y = -p.y - CFG.lift * (1 - e);
-
-  const flash = 0.75 * Math.sin(
-    Math.PI * clamp((u - 0.55) / 0.45)
-  );
-
-  const col = mix(
-    mix(BG, p.color, e ** 1.5),
-    FLASH,
-    flash
-  );
-
-  text(p, x, y, col, true);
-}
-
-// ==========================================
-// REPETIÇÃO INFINITA
-// ==========================================
-
-let started = null;
-
-function frame(now) {
-  if (started === null) {
-    started = now;
-  }
-
-  const elapsed = (now - started) % total;
-
-  // Limpa o fundo
-  ctx.fillStyle = CFG.background;
-  ctx.fillRect(-400, -400, 800, 800);
-
-  // Limita o desenho ao formato real
-  // do coração, sem letras escapando.
-  ctx.save();
-  ctx.clip(outline);
-
-  const count = Math.min(
-    ORDER.length,
-    Math.floor(
-      Math.min(1, elapsed / CFG.formation) *
-      ORDER.length
-    )
-  );
-
-  const complete = (
-    elapsed >= CFG.formation + CFG.settle
-  );
-
-  const highlighted = (
-    Math.floor(elapsed / 140) %
-    Math.max(1, ORDER.length)
-  );
-
-  for (let i = 0; i < count; i++) {
-    const age = (
-      elapsed -
-      i * CFG.formation / ORDER.length
+    // Interior depois
+    const interior = palavras.filter(
+        p => !p.borda
     );
 
-    draw(
-      ORDER[i],
-      age,
-      complete && i === highlighted
+    bordas.sort((a, b) => {
+        const aa = (
+            Math.atan2(
+                a.x, a.y - centroY
+            ) + 2 * Math.PI
+        ) % (2 * Math.PI);
+
+        const bb = (
+            Math.atan2(
+                b.x, b.y - centroY
+            ) + 2 * Math.PI
+        ) % (2 * Math.PI);
+
+        return aa - bb;
+    });
+
+    interior.forEach(p => {
+        p.ordem = -p.distancia +
+            numero(0, 0.045);
+    });
+
+    interior.sort(
+        (a, b) => a.ordem - b.ordem
     );
-  }
 
-  ctx.restore();
-
-  requestAnimationFrame(frame);
+    return [...bordas, ...interior];
 }
 
-// ==========================================
-// INICIAR
-// ==========================================
+const PALAVRAS = criarCoracao();
 
-requestAnimationFrame(frame);
+// ========================================
+// DESENHO DAS LETRAS
+// ========================================
+
+const FUNDO_RGB = [
+    6 / 255,
+    2 / 255,
+    8 / 255
+];
+
+const FLASH = [1, 0.75, 0.79];
+
+function desenharTexto(p, x, y, cor) {
+    definirFonte(p.tamanho);
+
+    ctx.shadowColor = "rgba(255,45,75,0.48)";
+    ctx.shadowBlur = CONFIG.brilho;
+
+    ctx.fillStyle = corRGB(cor);
+    ctx.fillText(p.texto, x, y);
+
+    ctx.shadowBlur = 0;
+    ctx.shadowColor = "transparent";
+}
+
+function desenharPalavra(p, idade, destaque) {
+    if (idade >= CONFIG.movimento) {
+        const cor = destaque
+            ? interpolar(p.cor, FLASH, 0.58)
+            : p.cor;
+
+        desenharTexto(
+            p,
+            p.x,
+            -p.y,
+            cor
+        );
+
+        return;
+    }
+
+    const progresso = limitar(
+        idade / CONFIG.movimento
+    );
+
+    const suavidade =
+        1 - Math.pow(1 - progresso, 3);
+
+    const x = p.x +
+        p.dx * (1 - suavidade);
+
+    const y = -p.y -
+        CONFIG.subida * (1 - suavidade);
+
+    const brilhoEntrada =
+        0.7 * Math.sin(
+            Math.PI * limitar(
+                (progresso - 0.55) / 0.45
+            )
+        );
+
+    const cor = interpolar(
+        interpolar(
+            FUNDO_RGB,
+            p.cor,
+            suavidade ** 1.5
+        ),
+        FLASH,
+        brilhoEntrada
+    );
+
+    desenharTexto(p, x, y, cor);
+}
+
+// ========================================
+// ANIMAÇÃO INFINITA
+// ========================================
+
+const CICLO =
+    CONFIG.duracao +
+    CONFIG.movimento +
+    CONFIG.espera;
+
+let inicioCiclo = null;
+
+function animar(agora) {
+    if (inicioCiclo === null) {
+        inicioCiclo = agora;
+    }
+
+    const tempo =
+        (agora - inicioCiclo) % CICLO;
+
+    // Limpa completamente o canvas
+    ctx.fillStyle = CONFIG.fundo;
+
+    ctx.fillRect(-400, -400, 800, 800);
+
+    // Proteção para nenhuma letra
+    // ultrapassar o coração
+    ctx.save();
+    ctx.clip(mascara);
+
+    const progresso = limitar(
+        tempo / CONFIG.duracao
+    );
+
+    const quantidade = Math.min(
+        PALAVRAS.length,
+        Math.floor(
+            PALAVRAS.length * progresso
+        )
+    );
+
+    const completo =
+        tempo >= CONFIG.duracao +
+        CONFIG.movimento;
+
+    const destaque = Math.floor(
+        tempo / 220
+    ) % Math.max(1, PALAVRAS.length);
+
+    for (let i = 0; i < quantidade; i++) {
+        const p = PALAVRAS[i];
+
+        const nascimento =
+            i * CONFIG.duracao /
+            PALAVRAS.length;
+
+        const idade = tempo - nascimento;
+
+        desenharPalavra(
+            p,
+            idade,
+            completo && i === destaque
+        );
+    }
+
+    ctx.restore();
+
+    requestAnimationFrame(animar);
+}
+
+requestAnimationFrame(animar);
+
