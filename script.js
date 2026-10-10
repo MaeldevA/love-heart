@@ -1,9 +1,9 @@
 "use strict";
 
 // ==========================================
-// LOVE HEART — VERSÃO APROVADA
-// AJUSTE ÚNICO: PREENCHER MELHOR OS ESPAÇOS
-// SEM DEIXAR PALAVRAS FORA DO CORAÇÃO
+// LOVE HEART — VERSÃO FINAL
+// preenche os vãos internos sem deixar
+// palavras fora do coração
 // ==========================================
 
 const SC = 21;
@@ -14,11 +14,12 @@ const TICK = 16;
 const ANIM = 42;
 const LIFT = 34;
 
-// só um pouco menor para preencher melhor
 const GAP = 5;
+const ROW_H = 21;
+const HALF = ROW_H / 2;
 
-// mantidos os tamanhos que ficaram bonitos
 const SIZES = [10, 11, 12, 13];
+const FILLER_SIZES = [11, 10, 9];
 
 const FONT = "Arial";
 const BG = "#060208";
@@ -27,6 +28,9 @@ const TEMPO_PARADO = 3500;
 
 const BRILHO = 5;
 const INTENSIDADE_BRILHO = 0.38;
+
+const FILLER_GAP = 4;
+const BOX_MARGIN = 2;
 
 // ==========================================
 // CANVAS
@@ -55,7 +59,7 @@ ctx.textAlign = "center";
 ctx.textBaseline = "middle";
 
 // ==========================================
-// FRASES PRINCIPAIS
+// FRASES
 // ==========================================
 
 const PHRASES = [
@@ -81,32 +85,27 @@ const PHRASES = [
     "Я тебе кохаю"
 ];
 
-// frases curtas para caber nos espaços vazios
 const FILLER_PHRASES = [
     "Te amo",
     "Eu te amo",
+    "I love you",
+    "Love you",
     "Ti amo",
     "Je t'aime",
-    "Love you",
-    "Amo você",
     "Te quiero",
+    "Amo você",
     "Ich liebe dich",
-    "Ti voglio bene",
-    "Mi amor",
-    "Mon amour",
-    "Amor meu",
-    "S2",
-    "Amor",
-    "Eu amo você",
-    "I adore you",
-    "Miluji tě",
-    "Volim te",
     "Te iubesc",
+    "Volim te",
+    "Miluji tě",
     "Mahal kita",
     "Aishiteru",
     "사랑해",
     "愛してる",
-    "我爱你"
+    "我爱你",
+    "Kocham cię",
+    "Ik hou van jou",
+    "Jag älskar dig"
 ];
 
 // ==========================================
@@ -175,7 +174,7 @@ const BGC = hexToRGB(BG);
 const FLASH = [1, 0.78, 0.78];
 
 // ==========================================
-// FORMATO MATEMÁTICO DO CORAÇÃO
+// FORMATO MATEMÁTICO
 // ==========================================
 
 function heart(a) {
@@ -208,10 +207,7 @@ const YMAX = Math.max(...POLY.map(p => p[1]));
 const YMIN = Math.min(...POLY.map(p => p[1]));
 const CY = (YMAX + YMIN) / 2;
 
-// ==========================================
-// MÁSCARA DO CORAÇÃO
-// ==========================================
-
+// máscara para nunca vazar pra fora
 const HEART_MASK = new Path2D();
 
 POLY.forEach((p, i) => {
@@ -273,8 +269,15 @@ function intersect(A, B) {
     return out;
 }
 
+function safeRowSpans(y, band = HALF * 0.92) {
+    return intersect(
+        spans(y + band),
+        spans(y - band)
+    );
+}
+
 // ==========================================
-// FONTES
+// FONTES / MEDIDAS
 // ==========================================
 
 function setFont(size) {
@@ -286,9 +289,97 @@ function measureText(text, size) {
     return ctx.measureText(text).width;
 }
 
-// diminuído só um pouco para preencher mais
-const ROW_H = 21;
-const HALF = ROW_H / 2;
+function textHeight(size) {
+    return size * 1.04;
+}
+
+// ==========================================
+// GEOMETRIA DOS ITENS
+// ==========================================
+
+function itemBounds(item) {
+    const h = textHeight(item.size);
+
+    return {
+        left: item.x - item.w / 2 - BOX_MARGIN,
+        right: item.x + item.w / 2 + BOX_MARGIN,
+        top: item.y + h / 2 + BOX_MARGIN,
+        bottom: item.y - h / 2 - BOX_MARGIN
+    };
+}
+
+function overlapsBox(a, b) {
+    return !(
+        a.right <= b.left ||
+        a.left >= b.right ||
+        a.top <= b.bottom ||
+        a.bottom >= b.top
+    );
+}
+
+function overlapsAny(bounds, placed) {
+    for (const p of placed) {
+        if (overlapsBox(bounds, itemBounds(p))) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function fitsInsideHeart(cx, cy, width, size) {
+    const h = textHeight(size);
+    const left = cx - width / 2;
+    const right = cx + width / 2;
+
+    const ys = [
+        cy - h * 0.45,
+        cy - h * 0.2,
+        cy,
+        cy + h * 0.2,
+        cy + h * 0.45
+    ];
+
+    for (const yy of ys) {
+        const row = spans(yy);
+        let ok = false;
+
+        for (const [lo, hi] of row) {
+            if (left >= lo + 1 && right <= hi - 1) {
+                ok = true;
+                break;
+            }
+        }
+
+        if (!ok) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function canPlaceText(text, size, cx, cy, placed) {
+    const w = measureText(text, size);
+
+    if (!fitsInsideHeart(cx, cy, w, size)) {
+        return null;
+    }
+
+    const item = {
+        x: cx,
+        y: cy,
+        text,
+        size,
+        w
+    };
+
+    if (overlapsAny(itemBounds(item), placed)) {
+        return null;
+    }
+
+    return item;
+}
 
 // ==========================================
 // DISTÂNCIA AO CENTRO
@@ -301,11 +392,38 @@ function mathDist(x, y) {
     );
 }
 
+function applyColorAndMotion(item, edge = false) {
+    const wine = [0.76, 0.055, 0.14];
+    const crimson = [1.0, 0.14, 0.23];
+    const blood = [1.0, 0.24, 0.32];
+
+    const rad = Math.min(1, mathDist(item.x, item.y));
+
+    let base = mix(
+        wine,
+        crimson,
+        0.25 + 0.75 * rad
+    );
+
+    base = mix(
+        base,
+        blood,
+        uniform(0, 0.22) + (edge ? 0.22 : 0)
+    );
+
+    item.edge = edge;
+    item.color = base.map(clamp);
+    item.rad = rad;
+    item.dx = uniform(-10, 10);
+
+    return item;
+}
+
 // ==========================================
-// CONSTRUÇÃO DO CORAÇÃO
+// BASE DO CORAÇÃO
 // ==========================================
 
-function build() {
+function buildBase() {
     const placed = [];
 
     let phraseOrder = shuffle(PHRASES);
@@ -338,7 +456,6 @@ function build() {
             while (true) {
                 let fit = null;
 
-                // primeiro tenta as frases normais
                 for (let k = 0; k < 10; k++) {
                     const text = nextPhrase();
                     const size = choice(SIZES);
@@ -350,51 +467,29 @@ function build() {
                     }
                 }
 
-                // se não couber, tenta preencher com frases curtas
-                if (!fit) {
-                    const fillers = shuffle(FILLER_PHRASES);
-
-                    for (const text of fillers) {
-                        for (const size of [10, 11, 9]) {
-                            const w = measureText(text, size);
-
-                            if (cur + w <= hi) {
-                                fit = { text, size, w };
-                                break;
-                            }
-                        }
-
-                        if (fit) break;
-                    }
-                }
-
                 if (!fit) {
                     break;
                 }
 
-                const { text, size, w } = fit;
+                const item = {
+                    x: cur + fit.w / 2,
+                    y,
+                    text: fit.text,
+                    size: fit.size,
+                    w: fit.w
+                };
 
-                line.push({
-                    x: cur + w / 2,
-                    text,
-                    size,
-                    w
-                });
-
-                cur += w + GAP;
+                line.push(item);
+                cur += fit.w + GAP;
             }
 
             if (line.length === 0) {
                 continue;
             }
 
-            // distribuição da linha
             if (line.length > 1) {
                 const last = line[line.length - 1];
-
-                const left = hi - (
-                    last.x + last.w / 2
-                );
+                const left = hi - (last.x + last.w / 2);
 
                 line.forEach((item, i) => {
                     item.x += (
@@ -405,79 +500,164 @@ function build() {
                 line[0].x = (lo + hi) / 2;
             }
 
-            // tentativa final de preencher o restinho do fim da linha
-            if (line.length > 0) {
-                const last = line[line.length - 1];
-                let endCursor = last.x + last.w / 2 + GAP;
-
-                if (hi - endCursor > 38) {
-                    const fillers = shuffle(FILLER_PHRASES);
-
-                    for (const text of fillers) {
-                        for (const size of [10, 9]) {
-                            const w = measureText(text, size);
-
-                            if (endCursor + w <= hi) {
-                                line.push({
-                                    x: endCursor + w / 2,
-                                    text,
-                                    size,
-                                    w
-                                });
-
-                                endCursor += w + GAP;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-
             line.forEach((item, i) => {
-                placed.push({
-                    x: item.x,
-                    y,
-                    text: item.text,
-                    size: item.size,
-                    edge: (
-                        i === 0 ||
-                        i === line.length - 1
-                    )
-                });
+                applyColorAndMotion(
+                    item,
+                    i === 0 || i === line.length - 1
+                );
+                placed.push(item);
             });
         }
 
         y -= ROW_H;
     }
 
-    const wine = [0.76, 0.055, 0.14];
-    const crimson = [1.0, 0.14, 0.23];
-    const blood = [1.0, 0.24, 0.32];
+    return placed;
+}
 
-    for (const p of placed) {
-        const rad = Math.min(
-            1,
-            mathDist(p.x, p.y)
-        );
+// ==========================================
+// PREENCHER OS VÃOS
+// ==========================================
 
-        let base = mix(
-            wine,
-            crimson,
-            0.25 + 0.75 * rad
-        );
-
-        base = mix(
-            base,
-            blood,
-            uniform(0, 0.22) + (p.edge ? 0.22 : 0)
-        );
-
-        p.color = base.map(clamp);
-        p.rad = rad;
+function mergeIntervals(intervals) {
+    if (!intervals.length) {
+        return [];
     }
 
-    const edges = placed.filter(p => p.edge);
-    const inner = placed.filter(p => !p.edge);
+    intervals.sort((a, b) => a[0] - b[0]);
+
+    const merged = [intervals[0].slice()];
+
+    for (let i = 1; i < intervals.length; i++) {
+        const current = intervals[i];
+        const last = merged[merged.length - 1];
+
+        if (current[0] <= last[1]) {
+            last[1] = Math.max(last[1], current[1]);
+        } else {
+            merged.push(current.slice());
+        }
+    }
+
+    return merged;
+}
+
+function fillVoids(placed) {
+    let fillerOrder = shuffle(FILLER_PHRASES);
+    let fillerIndex = 0;
+
+    function nextFillerPool() {
+        if (fillerIndex >= fillerOrder.length - 1) {
+            fillerOrder = shuffle(FILLER_PHRASES);
+            fillerIndex = 0;
+        }
+
+        const rotated = [
+            ...fillerOrder.slice(fillerIndex),
+            ...fillerOrder.slice(0, fillerIndex)
+        ];
+
+        fillerIndex++;
+        return rotated;
+    }
+
+    const candidateRows = [];
+
+    for (let y = YMAX - HALF; y > YMIN + HALF; y -= ROW_H / 2) {
+        candidateRows.push(y);
+    }
+
+    for (const y of candidateRows) {
+        const segments = safeRowSpans(y, HALF * 0.9);
+
+        for (const [segLo, segHi] of segments) {
+            const occupied = [];
+
+            for (const p of placed) {
+                const b = itemBounds(p);
+
+                if (b.top > y - HALF * 0.55 && b.bottom < y + HALF * 0.55) {
+                    occupied.push([b.left, b.right]);
+                }
+            }
+
+            const merged = mergeIntervals(occupied);
+
+            let start = segLo + 2;
+            const gaps = [];
+
+            for (const [lo, hi] of merged) {
+                if (lo - start > 26) {
+                    gaps.push([start, lo]);
+                }
+                start = Math.max(start, hi);
+            }
+
+            if (segHi - start > 26) {
+                gaps.push([start, segHi - 2]);
+            }
+
+            for (const [gapLo, gapHi] of gaps) {
+                let cursor = gapLo + 1;
+                let localGuard = 0;
+
+                while (gapHi - cursor > 22 && localGuard < 12) {
+                    localGuard++;
+
+                    let chosen = null;
+                    let chosenFit = null;
+
+                    const pool = nextFillerPool();
+
+                    for (const text of pool) {
+                        for (const size of FILLER_SIZES) {
+                            const w = measureText(text, size);
+
+                            if (cursor + w > gapHi) {
+                                continue;
+                            }
+
+                            const cx = cursor + w / 2;
+                            const fit = canPlaceText(text, size, cx, y, placed);
+
+                            if (fit) {
+                                chosen = text;
+                                chosenFit = fit;
+                                break;
+                            }
+                        }
+
+                        if (chosenFit) {
+                            break;
+                        }
+                    }
+
+                    if (!chosenFit) {
+                        break;
+                    }
+
+                    applyColorAndMotion(chosenFit, false);
+                    placed.push(chosenFit);
+
+                    cursor += chosenFit.w + FILLER_GAP;
+                }
+            }
+        }
+    }
+
+    return placed;
+}
+
+// ==========================================
+// ORDEM FINAL DA ANIMAÇÃO
+// ==========================================
+
+function build() {
+    const base = buildBase();
+    const all = fillVoids(base);
+
+    const edges = all.filter(p => p.edge);
+    const inner = all.filter(p => !p.edge);
 
     edges.sort((a, b) => {
         const angleA = (
@@ -492,7 +672,7 @@ function build() {
     });
 
     inner.forEach(p => {
-        p.sortValue = -p.rad + uniform(0, 0.08);
+        p.sortValue = -p.rad + uniform(0, 0.05);
     });
 
     inner.sort((a, b) => a.sortValue - b.sortValue);
@@ -509,10 +689,6 @@ const ORDER = build();
 const FORMATION_MS = DURATION * 1000;
 const FINISH_MS = ANIM * TICK;
 const CYCLE_MS = FORMATION_MS + FINISH_MS + TEMPO_PARADO;
-
-for (const p of ORDER) {
-    p.dx = uniform(-10, 10);
-}
 
 // ==========================================
 // DESENHO
